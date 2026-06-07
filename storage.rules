@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // User profile photos — owner writes, public read (used on cards/profiles)
+    match /users/{uid}/photos/{filename} {
+      allow read:  if true;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Generated card images — public read; only authenticated users may write
+    // (Cloud Functions write via admin SDK; client uploads original photo before AI call)
+    match /cards/{cardId}/{filename} {
+      allow read:  if true;
+      allow write: if request.auth != null
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Club logos — public read; club owner writes
+    match /clubs/{clubId}/logo/{filename} {
+      allow read:  if true;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Template previews — public read; admin SDK writes only
+    match /templates/{templateId}/preview.png {
+      allow read:  if true;
+      allow write: if false;
+    }
+  }
+}

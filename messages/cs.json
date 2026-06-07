@@ -1,0 +1,231 @@
+{
+  "common": {
+    "loading": "Načítání...",
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "delete": "Smazat",
+    "edit": "Upravit",
+    "back": "Zpět",
+    "create": "Vytvořit",
+    "share": "Sdílet",
+    "download": "Stáhnout",
+    "print": "Tisknout",
+    "close": "Zavřít",
+    "confirm": "Potvrdit",
+    "yes": "Ano",
+    "no": "Ne",
+    "search": "Hledat",
+    "filter": "Filtrovat",
+    "all": "Vše",
+    "error": "Chyba",
+    "success": "Úspěch"
+  },
+  "nav": {
+    "dashboard": "Přehled",
+    "players": "Hráči",
+    "teams": "Týmy",
+    "cards": "Kartičky",
+    "studio": "AI Studio",
+    "print": "Tisk",
+    "achievements": "Úspěchy",
+    "settings": "Nastavení",
+    "profile": "Profil",
+    "logout": "Odhlásit se"
+  },
+  "auth": {
+    "login": "Přihlásit se",
+    "register": "Registrovat se",
+    "logout": "Odhlásit se",
+    "email": "E-mail",
+    "password": "Heslo",
+    "forgotPassword": "Zapomenuté heslo",
+    "resetPassword": "Obnovit heslo",
+    "googleLogin": "Přihlásit se přes Google",
+    "noAccount": "Nemáte účet?",
+    "hasAccount": "Již máte účet?"
+  },
+  "dashboard": {
+    "welcome": "Vítejte zpět",
+    "recentCards": "Nedávné kartičky",
+    "quickCreate": "Rychlé vytvoření",
+    "recentMatches": "Nedávné zápasy",
+    "xpProgress": "XP pokrok",
+    "level": "Úroveň"
+  },
+  "players": {
+    "title": "Hráči",
+    "newPlayer": "Nový hráč",
+    "name": "Jméno",
+    "position": "Pozice",
+    "jerseyNumber": "Číslo dresu",
+    "birthYear": "Rok narození",
+    "favoriteClub": "Oblíbený klub",
+    "favoritePlayer": "Oblíbený hráč",
+    "positions": {
+      "goalkeeper": "Brankář",
+      "defender": "Obránce",
+      "midfielder": "Záložník",
+      "forward": "Útočník"
+    },
+    "stats": {
+      "goals": "Góly",
+      "assists": "Asistence",
+      "matches": "Zápasy",
+      "rating": "Hodnocení",
+      "cleanSheets": "Čistá konta",
+      "saves": "Zákroky"
+    }
+  },
+  "teams": {
+    "title": "Týmy",
+    "newTeam": "Nový tým",
+    "name": "Název týmu",
+    "season": "Sezóna",
+    "ageCategory": "Věková kategorie",
+    "roster": "Soupiska",
+    "invite": "Pozvat",
+    "inviteEmail": "Pozvat e-mailem",
+    "inviteLink": "Kopírovat odkaz",
+    "inviteQR": "QR kód"
+  },
+  "matches": {
+    "title": "Zápasy",
+    "newMatch": "Nový zápas",
+    "opponent": "Soupeř",
+    "date": "Datum",
+    "venue": "Místo",
+    "result": "Výsledek",
+    "stats": "Statistiky",
+    "mvp": "Nejlepší hráč",
+    "status": {
+      "scheduled": "Naplánovaný",
+      "completed": "Odehraný",
+      "cancelled": "Zrušený"
+    }
+  },
+  "cards": {
+    "title": "Kartičky",
+    "newCard": "Nová kartička",
+    "collection": "Kolekce",
+    "types": {
+      "match": "Zápasová kartička",
+      "mvp": "MVP kartička",
+      "season": "Sezónní kartička",
+      "achievement": "Úspěchová kartička",
+      "team": "Týmová kartička",
+      "tournament": "Turnajová kartička",
+      "birthday": "Narozeninová kartička",
+      "farewell": "Rozlučková kartička",
+      "champion": "Šampionská kartička",
+      "rookie": "Nováčkovská kartička"
+    },
+    "rarity": {
+      "common": "Běžná",
+      "uncommon": "Neobvyklá",
+      "rare": "Vzácná",
+      "epic": "Epická",
+      "legendary": "Legendární",
+      "mythic": "Mýtická",
+      "limited": "Limitovaná edice"
+    },
+    "effects": {
+      "goldFoil": "Zlatá fólie",
+      "hologram": "Hologram",
+      "neon": "Neon",
+      "led": "LED",
+      "fire": "Oheň"
+    }
+  },
+  "editor": {
+    "title": "Upravit kartičku",
+    "save": "Uložit",
+    "exportPNG": "Exportovat PNG",
+    "content": "Obsah",
+    "design": "Design",
+    "effects": "Efekty",
+    "stats": "Statistiky",
+    "goals": "Góly",
+    "assists": "Asistence",
+    "rating": "Hodnocení",
+    "overall": "Celkové",
+    "season": "Sezóna",
+    "template": "Šablona",
+    "rarity": "Vzácnost",
+    "cardType": "Typ kartičky",
+    "effectNone": "Žádný",
+    "effectGoldFoil": "Zlatá fólie",
+    "effectHologram": "Hologram",
+    "effectNeon": "Neon",
+    "effectLed": "LED",
+    "effectFire": "Oheň",
+    "saving": "Ukládám...",
+    "exporting": "Exportuji...",
+    "unsavedChanges": "Neuložené změny",
+    "noTemplates": "Žádné šablony",
+    "selectTemplate": "Vyberte šablonu",
+    "exportSuccess": "PNG uloženo do galerie.",
+    "saveSuccess": "Kartička uložena."
+  },
+  "studio": {
+    "title": "AI Studio",
+    "removeBackground": "Odstranit pozadí",
+    "enhanceFace": "Vylepšit fotku",
+    "actionPose": "Akční póza",
+    "stadiumGenerator": "Generátor stadionu",
+    "cardStory": "Příběh kartičky",
+    "styleTransfer": "Přenos stylu",
+    "styles": {
+      "fifa": "FIFA",
+      "panini": "Panini",
+      "comic": "Komiks",
+      "anime": "Anime",
+      "cartoon": "Kreslený",
+      "fantasy": "Fantasy",
+      "superhero": "Superhrdina"
+    },
+    "processing": "Zpracovávám...",
+    "premiumRequired": "Vyžaduje prémiový účet"
+  },
+  "achievements": {
+    "title": "Úspěchy",
+    "xp": "XP",
+    "level": "Úroveň",
+    "unlocked": "Odemčeno",
+    "locked": "Zamčeno"
+  },
+  "print": {
+    "title": "Tisk",
+    "formats": {
+      "a4": "A4",
+      "a5": "A5",
+      "sticker9": "Arch samolepek (9ks)",
+      "sticker12": "Arch samolepek (12ks)",
+      "album": "Album PDF",
+      "teamPack": "Týmová sada"
+    },
+    "download": "Stáhnout PDF"
+  },
+  "settings": {
+    "title": "Nastavení",
+    "account": "Účet",
+    "subscription": "Předplatné",
+    "notifications": "Oznámení",
+    "language": "Jazyk",
+    "theme": "Téma"
+  },
+  "subscription": {
+    "free": "Zdarma",
+    "premium": "Prémium",
+    "team": "Tým",
+    "club": "Klub",
+    "upgrade": "Upgradovat",
+    "cardsPerMonth": "kartiček za měsíc",
+    "unlimited": "Neomezeno"
+  },
+  "errors": {
+    "generic": "Něco se pokazilo. Zkuste to znovu.",
+    "notFound": "Stránka nenalezena.",
+    "unauthorized": "Nemáte oprávnění k této akci.",
+    "uploadFailed": "Nahrání se nezdařilo."
+  }
+}

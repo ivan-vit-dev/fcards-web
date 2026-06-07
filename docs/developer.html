@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fotbalové Kartičky — Developer Reference</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #09090b;
+      --surface:   #18181b;
+      --surface2:  #27272a;
+      --border:    #3f3f46;
+      --gold:      #d97706;
+      --gold-dim:  #92400e;
+      --gold-fg:   #fbbf24;
+      --text:      #f4f4f5;
+      --muted:     #a1a1aa;
+      --dim:       #71717a;
+      --blue:      #60a5fa;
+      --green:     #4ade80;
+      --orange:    #fb923c;
+      --red:       #f87171;
+      --sidebar-w: 260px;
+      --radius:    8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed; top: 0; left: 0;
+      height: 100vh; overflow-y: auto;
+      padding: 0 0 32px;
+      flex-shrink: 0;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .sidebar-logo {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 800; font-size: .95rem;
+    }
+    .sidebar-logo span { color: var(--gold-fg); }
+
+    .nav-group { padding: 14px 0 4px; }
+    .nav-group-label {
+      padding: 0 16px 6px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--dim);
+    }
+    .nav-link {
+      display: block; padding: 6px 16px;
+      font-size: .82rem; color: var(--muted);
+      text-decoration: none; border-radius: 0;
+      transition: color .15s, background .15s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .nav-link.active { color: var(--gold-fg); background: color-mix(in oklch, var(--gold) 10%, transparent); }
+
+    /* ── Main ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1; padding: 0 0 80px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      background: linear-gradient(160deg, #1c1008 0%, #09090b 80%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 48px 32px;
+    }
+    .page-header .label {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+    }
+    .page-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.5px; }
+    .page-header p { color: var(--muted); margin-top: 8px; max-width: 600px; font-size: .9rem; }
+
+    /* ── Section ── */
+    .section { padding: 40px 48px; border-bottom: 1px solid var(--border); }
+    .section:last-of-type { border-bottom: none; }
+    .section > h2 {
+      font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px;
+      margin-bottom: 4px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section > .section-desc { color: var(--muted); font-size: .85rem; margin-bottom: 20px; margin-top: 6px; }
+
+    h3 {
+      font-size: 1rem; font-weight: 700; margin: 24px 0 8px;
+      color: var(--gold-fg);
+    }
+    h3:first-child { margin-top: 0; }
+    h4 { font-size: .88rem; font-weight: 600; margin: 16px 0 6px; color: var(--text); }
+    p { font-size: .88rem; color: var(--muted); margin: 6px 0; }
+
+    /* ── Code / paths ── */
+    code {
+      font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+      font-size: .8rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--gold-fg);
+    }
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-family: "Cascadia Code", "Fira Code", monospace;
+      font-size: .78rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin: 10px 0;
+    }
+    pre .c { color: var(--dim); }
+    pre .k { color: var(--blue); }
+    pre .s { color: var(--green); }
+    pre .p { color: var(--gold-fg); }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--surface2); vertical-align: top; }
+    thead th {
+      background: var(--surface2); color: var(--muted);
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    tbody tr:hover { background: var(--surface); }
+    td { font-size: .83rem; }
+    td:first-child { white-space: nowrap; }
+    td code { font-size: .75rem; }
+
+    /* ── Cards / boxes ── */
+    .box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin: 10px 0;
+    }
+    .box-title {
+      font-weight: 700; font-size: .88rem;
+      margin-bottom: 6px; color: var(--text);
+    }
+    .box p { margin: 0; }
+
+    /* ── Page entries ── */
+    .page-entry {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 14px 0;
+      overflow: hidden;
+    }
+    .page-entry-header {
+      background: var(--surface2);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .page-entry-route {
+      font-family: monospace; font-size: .82rem;
+      color: var(--blue); font-weight: 600;
+    }
+    .page-entry-file {
+      font-family: monospace; font-size: .75rem;
+      color: var(--dim);
+      margin-left: auto;
+    }
+    .page-entry-body { padding: 12px 16px; }
+    .page-entry-body p { margin: 4px 0; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .tag-public  { background: color-mix(in oklch, var(--green) 15%, transparent); color: var(--green); }
+    .tag-auth    { background: color-mix(in oklch, var(--blue)  15%, transparent); color: var(--blue); }
+    .tag-admin   { background: color-mix(in oklch, var(--red)   15%, transparent); color: var(--red); }
+    .tag-layout  { background: color-mix(in oklch, var(--orange) 15%, transparent); color: var(--orange); }
+
+    /* ── Component pill list ── */
+    .pill-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+    .pill {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 2px 10px;
+      font-size: .75rem; color: var(--muted);
+      font-family: monospace;
+    }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── File tree ── */
+    .file-tree {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: "Cascadia Code", "Fira Code", monospace;
+      font-size: .78rem;
+      line-height: 2;
+      color: var(--muted);
+    }
+    .file-tree .dir  { color: var(--blue); }
+    .file-tree .file { color: var(--text); }
+    .file-tree .note { color: var(--dim); font-style: italic; }
+
+    /* ── Two-col grid ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── Highlight row ── */
+    .hl { border-left: 3px solid var(--gold); padding-left: 10px; margin: 8px 0; }
+    .hl strong { color: var(--text); font-size: .88rem; display: block; }
+    .hl span { color: var(--muted); font-size: .82rem; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; }
+      .section, .page-header { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">Fotbalové <span>Kartičky</span><br><small style="color:var(--dim);font-weight:400;font-size:.7rem">Developer Reference</small></div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Project</div>
+    <a class="nav-link" href="#architecture">Architecture</a>
+    <a class="nav-link" href="#structure">File Structure</a>
+    <a class="nav-link" href="#routing">Route Map</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Pages</div>
+    <a class="nav-link" href="#pg-public">Public Pages</a>
+    <a class="nav-link" href="#pg-auth">Auth Pages</a>
+    <a class="nav-link" href="#pg-dashboard">Dashboard</a>
+    <a class="nav-link" href="#pg-players">Players</a>
+    <a class="nav-link" href="#pg-teams">Teams &amp; Matches</a>
+    <a class="nav-link" href="#pg-cards">Cards</a>
+    <a class="nav-link" href="#pg-editor">Card Editor</a>
+    <a class="nav-link" href="#pg-studio">AI Studio</a>
+    <a class="nav-link" href="#pg-print">Print Center</a>
+    <a class="nav-link" href="#pg-achievements">Achievements</a>
+    <a class="nav-link" href="#pg-settings">Settings</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Components</div>
+    <a class="nav-link" href="#comp-layout">Layout</a>
+    <a class="nav-link" href="#comp-card">Card</a>
+    <a class="nav-link" href="#comp-editor">Editor</a>
+    <a class="nav-link" href="#comp-player">Player</a>
+    <a class="nav-link" href="#comp-team">Team</a>
+    <a class="nav-link" href="#comp-collection">Collection</a>
+    <a class="nav-link" href="#comp-achievements">Achievements</a>
+    <a class="nav-link" href="#comp-studio">Studio</a>
+    <a class="nav-link" href="#comp-share">Share &amp; Print</a>
+    <a class="nav-link" href="#comp-subscription">Subscription</a>
+    <a class="nav-link" href="#comp-providers">Providers</a>
+    <a class="nav-link" href="#comp-ui">UI Primitives</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Business Logic</div>
+    <a class="nav-link" href="#lib-firebase">Firebase Init</a>
+    <a class="nav-link" href="#lib-services">Firestore Services</a>
+    <a class="nav-link" href="#lib-card">Card Engine</a>
+    <a class="nav-link" href="#lib-subscription">Subscription Engine</a>
+    <a class="nav-link" href="#lib-xp">XP &amp; Achievements</a>
+    <a class="nav-link" href="#lib-print">Print Engine</a>
+    <a class="nav-link" href="#lib-share">Share Utils</a>
+    <a class="nav-link" href="#lib-konva">Konva &amp; Export</a>
+    <a class="nav-link" href="#lib-utils">Utils</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Infrastructure</div>
+    <a class="nav-link" href="#state">Zustand Stores</a>
+    <a class="nav-link" href="#hooks">Custom Hooks</a>
+    <a class="nav-link" href="#types">Types</a>
+    <a class="nav-link" href="#i18n">i18n</a>
+    <a class="nav-link" href="#firebase-config">Firebase Config</a>
+    <a class="nav-link" href="#security">Security Rules</a>
+    <a class="nav-link" href="#functions">Cloud Functions</a>
+    <a class="nav-link" href="#pwa">PWA &amp; FCM</a>
+    <a class="nav-link" href="#config">Build Config</a>
+    <a class="nav-link" href="#patterns">Patterns &amp; Gotchas</a>
+  </div>
+</nav>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main class="main">
+
+<div class="page-header">
+  <div class="label">Developer Reference</div>
+  <h1>Fotbalové Kartičky</h1>
+  <p>Complete page-by-page, component-by-component, file-by-file reference for developers working on this codebase.</p>
+</div>
+
+<!-- ─────────────────────────────── ARCHITECTURE ─────────────────────────────── -->
+<div class="section" id="architecture">
+  <h2>Architecture Overview</h2>
+  <p class="section-desc">Guiding constraints and decisions — read this before touching the code.</p>
+
+  <div class="two-col">
+    <div class="box">
+      <div class="box-title">Auth model</div>
+      <p>Client-side only. <code>AuthProvider</code> wraps <code>onAuthStateChanged</code> → <code>useAuthStore</code>.
+         Route guards in <code>AppShell</code> (client component). No middleware auth. No Admin SDK. No session cookies.</p>
+    </div>
+    <div class="box">
+      <div class="box-title">Firestore access</div>
+      <p>All reads/writes via <code>src/lib/firebaseServices.ts</code> only.
+         Never import <code>db</code> in components/hooks/stores directly.
+         Every document has <code>createdAt</code>, <code>updatedAt</code> (Timestamps) and <code>userId</code>/<code>ownerId</code>.</p>
+    </div>
+    <div class="box">
+      <div class="box-title">AI calls</div>
+      <p>All OpenAI and Replicate calls made from Firebase Cloud Functions only.
+         Client calls HTTP endpoint → gets <code>jobId</code> → opens <code>onSnapshot</code> on card doc watching <code>aiStatus</code>.
+         API keys never in <code>.env.local</code> or client bundle.</p>
+    </div>
+    <div class="box">
+      <div class="box-title">Real-time listeners</div>
+      <p>Only one: card detail page opens <code>onSnapshot</code> on <code>cards/{cardId}</code> while <code>aiStatus === "pending" | "processing"</code>. Closed when status becomes <code>"done" | "error"</code>.</p>
+    </div>
+    <div class="box">
+      <div class="box-title">Canvas editor</div>
+      <p>Konva Stage initialized once via <code>useRef</code> in <code>useEffect</code>. Never recreated on re-render. Dimensions: <strong>420×588 px</strong> (2.5:3.5 card ratio). Export: <code>stage.toBlob({ pixelRatio: 3 })</code>.</p>
+    </div>
+    <div class="box">
+      <div class="box-title">Subscription gating</div>
+      <p>All tier limits in <code>src/lib/subscriptionEngine.ts</code>.
+         Gate with <code>canGenerateCard(tier, count)</code>, <code>canUseAI()</code>, <code>canPrint()</code>.
+         Show <code>&lt;UpgradeDialog&gt;</code> on failure. Never hardcode limits in components.</p>
+    </div>
+  </div>
+
+  <h3>Firestore Collections</h3>
+  <pre>users/{uid}
+users/{uid}/players/{playerId}
+teams/{teamId}
+teams/{teamId}/members/{userId}
+matches/{matchId}
+matches/{matchId}/playerStats/{playerId}
+cards/{cardId}
+collections/{collectionId}
+achievements/{achievementId}           <span class="c"># global definitions</span>
+userAchievements/{uid}/{achievementId}
+templates/{templateId}
+clubs/{clubId}</pre>
+
+  <h3>Firebase Storage Paths</h3>
+  <pre>users/{uid}/photos/{filename}          <span class="c"># player photos</span>
+cards/{cardId}/output.png              <span class="c"># full-res card export</span>
+cards/{cardId}/thumbnail.png           <span class="c"># collection thumbnail</span>
+clubs/{clubId}/logo/{filename}
+templates/{templateId}/preview.png</pre>
+</div>
+
+<!-- ─────────────────────────────── FILE STRUCTURE ─────────────────────────────── -->
+<div class="section" id="structure">
+  <h2>File Structure</h2>
+  <p class="section-desc">Canonical layout — every file has exactly one responsibility.</p>
+
+  <div class="file-tree">
+<span class="dir">src/</span><br>
+├── <span class="dir">app/</span>               <span class="note"># Next.js App Router</span><br>
+│   ├── layout.tsx             <span class="note"># Root HTML shell</span><br>
+│   ├── page.tsx               <span class="note"># Redirects to /[locale]</span><br>
+│   ├── global-error.tsx       <span class="note"># Root error fallback (renders own html tag)</span><br>
+│   └── <span class="dir">[locale]/</span><br>
+│       ├── layout.tsx         <span class="note"># Providers, fonts, metadata+manifest</span><br>
+│       ├── page.tsx           <span class="note"># Public landing page</span><br>
+│       ├── error.tsx          <span class="note"># Locale error boundary</span><br>
+│       ├── <span class="dir">auth/</span>          <span class="note"># login / register / reset</span><br>
+│       ├── <span class="dir">card/[shareSlug]/</span>  <span class="note"># Public card viewer</span><br>
+│       ├── <span class="dir">player/[slug]/</span>    <span class="note"># Public player profile</span><br>
+│       └── <span class="dir">(protected)/</span>  <span class="note"># Auth-guarded (AppShell)</span><br>
+│           ├── layout.tsx<br>
+│           ├── error.tsx<br>
+│           ├── <span class="dir">dashboard/</span><br>
+│           ├── <span class="dir">players/</span>   <span class="note"># list · new · [playerId]</span><br>
+│           ├── <span class="dir">teams/</span>     <span class="note"># list · new · [teamId] · matches/new · matches/[matchId]</span><br>
+│           ├── <span class="dir">matches/</span>   <span class="note"># global match list</span><br>
+│           ├── <span class="dir">cards/</span>     <span class="note"># list · new · [cardId] · [cardId]/edit</span><br>
+│           ├── <span class="dir">studio/</span>    <span class="note"># AI tools</span><br>
+│           ├── <span class="dir">print/</span><br>
+│           ├── <span class="dir">achievements/</span><br>
+│           └── <span class="dir">settings/subscription/</span><br>
+├── <span class="dir">components/</span><br>
+│   ├── <span class="dir">ui/</span>              <span class="note"># shadcn/ui primitives (never edit directly)</span><br>
+│   ├── <span class="dir">layout/</span>          <span class="note"># AppShell, AppSidebar, AppTopbar, AppBottomNav, PublicHeader, PageTransition</span><br>
+│   ├── <span class="dir">providers/</span>       <span class="note"># AuthProvider, ThemeProvider</span><br>
+│   ├── <span class="dir">card/</span>            <span class="note"># CardPreview, CardFlip, RarityBadge, CardGeneratorWizard</span><br>
+│   ├── <span class="dir">editor/</span>          <span class="note"># CardEditorCanvas, EditorToolbar, DesignPanel, ContentPanel, EffectsPanel</span><br>
+│   ├── <span class="dir">player/</span>          <span class="note"># PlayerCard, PlayerForm, PhotoUpload</span><br>
+│   ├── <span class="dir">team/</span>            <span class="note"># TeamCard, TeamForm, TeamRoster, InvitePanel</span><br>
+│   ├── <span class="dir">match/</span>           <span class="note"># MatchForm, StatsEntryForm</span><br>
+│   ├── <span class="dir">collection/</span>      <span class="note"># CollectionGrid, CollectionFilters, SeasonAlbum, CardHologramEffect</span><br>
+│   ├── <span class="dir">achievements/</span>    <span class="note"># AchievementCard, XPBar, LevelBadge</span><br>
+│   ├── <span class="dir">studio/</span>          <span class="note"># AIProgressIndicator, BackgroundRemover, StyleTransferPanel</span><br>
+│   ├── <span class="dir">share/</span>           <span class="note"># ShareButtons, QRCodePanel</span><br>
+│   ├── <span class="dir">print/</span>           <span class="note"># PrintFormatSelector, CardSelectionGrid</span><br>
+│   └── <span class="dir">subscription/</span>    <span class="note"># UpgradeDialog</span><br>
+├── <span class="dir">lib/</span>               <span class="note"># Pure business logic, no React</span><br>
+│   ├── firebase.ts          <span class="note"># initializeApp — exports auth, db, storage</span><br>
+│   ├── firebaseServices.ts  <span class="note"># All Firestore CRUD (only place db is used)</span><br>
+│   ├── utils.ts             <span class="note"># cn, formatDate, getRarityColor, getLevelFromXP, getLevelTier, getFirebaseErrorMessage</span><br>
+│   ├── cardEngine.ts        <span class="note"># calculateRarity, generateCardStats, canGenerateCard (delegates to subscriptionEngine)</span><br>
+│   ├── cardExport.ts        <span class="note"># Konva toBlob → Storage upload</span><br>
+│   ├── konvaEffects.ts      <span class="note"># Konva filter setup per effect type</span><br>
+│   ├── achievementEngine.ts <span class="note"># checkAchievements(user, event)</span><br>
+│   ├── xpEngine.ts          <span class="note"># addXP, getLevelFromXP, getUnlockables</span><br>
+│   ├── printEngine.ts       <span class="note"># PRINT_FORMATS, LAYOUTS, exportCardsToPDF</span><br>
+│   ├── subscriptionEngine.ts <span class="note"># TIER_LIMITS, all gate functions</span><br>
+│   └── shareUtils.ts        <span class="note"># Share URL builders, incrementShareCount</span><br>
+├── <span class="dir">store/</span><br>
+│   ├── authStore.ts         <span class="note"># useAuthStore: user, loading, setUser, setLoading, logout</span><br>
+│   └── appStore.ts          <span class="note"># usePlayersStore, useTeamsStore, useMatchesStore, useCardsStore, useAchievementsStore</span><br>
+├── <span class="dir">hooks/</span><br>
+│   ├── use-auth-forms.ts    <span class="note"># Login/register/reset logic</span><br>
+│   ├── use-aggregate-stats.ts<br>
+│   ├── use-card-editor.ts<br>
+│   ├── use-collection.ts<br>
+│   ├── use-ai-generation.ts <span class="note"># Polls aiStatus via onSnapshot</span><br>
+│   ├── use-share.ts<br>
+│   └── use-fcm.ts           <span class="note"># FCM token + permission</span><br>
+├── <span class="dir">types/</span><br>
+│   └── index.ts             <span class="note"># All domain types</span><br>
+├── <span class="dir">i18n/</span><br>
+│   ├── routing.ts           <span class="note"># Locale list, default locale</span><br>
+│   └── request.ts           <span class="note"># getRequestConfig</span><br>
+└── proxy.ts                 <span class="note"># next-intl middleware (MUST be named proxy.ts, not middleware.ts)</span>
+  </div>
+
+  <div class="file-tree" style="margin-top:12px">
+<span class="dir">messages/</span>      cs.json · en.json<br>
+<span class="dir">functions/src/</span> index.ts · ai/ · notifications/<br>
+<span class="dir">public/</span>        manifest.json · sw.js · icons/icon-{72..512}.png<br>
+<span class="file">firestore.rules</span> · <span class="file">storage.rules</span> · <span class="file">firestore.indexes.json</span> · <span class="file">firebase.json</span> · <span class="file">.firebaserc</span>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── ROUTE MAP ─────────────────────────────── -->
+<div class="section" id="routing">
+  <h2>Route Map</h2>
+  <p class="section-desc">All Next.js routes. Every route lives under <code>src/app/[locale]/</code>. Middleware: <code>src/proxy.ts</code>.</p>
+
+  <table>
+    <thead><tr><th>URL Pattern</th><th>Access</th><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>/cs</code> · <code>/en</code></td><td><span class="tag tag-public">public</span></td><td><code>[locale]/page.tsx</code></td><td>Landing page, hero, CTA</td></tr>
+      <tr><td><code>/cs/auth/login</code></td><td><span class="tag tag-public">public</span></td><td><code>[locale]/auth/login/page.tsx</code></td><td>Email + password login</td></tr>
+      <tr><td><code>/cs/auth/register</code></td><td><span class="tag tag-public">public</span></td><td><code>[locale]/auth/register/page.tsx</code></td><td>New account + role selection</td></tr>
+      <tr><td><code>/cs/auth/reset</code></td><td><span class="tag tag-public">public</span></td><td><code>[locale]/auth/reset/page.tsx</code></td><td>Password reset email</td></tr>
+      <tr><td><code>/cs/card/:shareSlug</code></td><td><span class="tag tag-public">public</span></td><td><code>[locale]/card/[shareSlug]/page.tsx</code></td><td>Public card viewer + share</td></tr>
+      <tr><td><code>/cs/player/:slug</code></td><td><span class="tag tag-public">public</span></td><td><code>[locale]/player/[slug]/page.tsx</code></td><td>Public player profile</td></tr>
+      <tr><td><code>/cs/dashboard</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/dashboard/page.tsx</code></td><td>Stats overview, recent cards, quick actions</td></tr>
+      <tr><td><code>/cs/players</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/players/page.tsx</code></td><td>Player grid</td></tr>
+      <tr><td><code>/cs/players/new</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/players/new/page.tsx</code></td><td>Create player</td></tr>
+      <tr><td><code>/cs/players/:id</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/players/[playerId]/page.tsx</code></td><td>Player detail + stats</td></tr>
+      <tr><td><code>/cs/teams</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/teams/page.tsx</code></td><td>Team grid</td></tr>
+      <tr><td><code>/cs/teams/new</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/teams/new/page.tsx</code></td><td>Create team</td></tr>
+      <tr><td><code>/cs/teams/:id</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/teams/[teamId]/page.tsx</code></td><td>Team detail, roster, invite</td></tr>
+      <tr><td><code>/cs/teams/:id/matches/new</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/teams/[teamId]/matches/new/page.tsx</code></td><td>Create match + enter stats</td></tr>
+      <tr><td><code>/cs/teams/:id/matches/:mid</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/teams/[teamId]/matches/[matchId]/page.tsx</code></td><td>Match detail + player stats</td></tr>
+      <tr><td><code>/cs/matches</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/matches/page.tsx</code></td><td>All matches list</td></tr>
+      <tr><td><code>/cs/cards</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/cards/page.tsx</code></td><td>Card collection + filters</td></tr>
+      <tr><td><code>/cs/cards/new</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/cards/new/page.tsx</code></td><td>Card generator wizard (gated)</td></tr>
+      <tr><td><code>/cs/cards/:id</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/cards/[cardId]/page.tsx</code></td><td>Card detail, AI status, share</td></tr>
+      <tr><td><code>/cs/cards/:id/edit</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/cards/[cardId]/edit/page.tsx</code></td><td>Konva card editor</td></tr>
+      <tr><td><code>/cs/studio</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/studio/page.tsx</code></td><td>AI tools (background remover, style transfer)</td></tr>
+      <tr><td><code>/cs/print</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/print/page.tsx</code></td><td>PDF export center (gated)</td></tr>
+      <tr><td><code>/cs/achievements</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/achievements/page.tsx</code></td><td>Achievement gallery, XP, level</td></tr>
+      <tr><td><code>/cs/settings/subscription</code></td><td><span class="tag tag-auth">auth</span></td><td><code>(protected)/settings/subscription/page.tsx</code></td><td>Tier comparison, upgrade CTA</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Layout hierarchy</h3>
+  <pre>app/layout.tsx                     <span class="c"># &lt;html&gt;&lt;body&gt; only</span>
+└── [locale]/layout.tsx            <span class="c"># next-intl, AuthProvider, ThemeProvider, fonts, metadata</span>
+    ├── auth/layout.tsx            <span class="c"># Centered card, PublicHeader</span>
+    ├── (protected)/layout.tsx     <span class="c"># AppShell (sidebar + topbar + bottom nav + PageTransition)</span>
+    └── (public pages)             <span class="c"># PublicHeader</span></pre>
+</div>
+
+<!-- ─────────────────────────────── PAGES ─────────────────────────────── -->
+
+<!-- PUBLIC -->
+<div class="section" id="pg-public">
+  <h2>Public Pages</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-public">public</span>
+      <span class="page-entry-route">/cs</span>
+      <span class="page-entry-file">src/app/[locale]/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Landing page. Hero section with CTA. Links to <code>/auth/login</code> and <code>/auth/register</code>. Shows feature highlights. Uses <code>PublicHeader</code>. No auth check — redirect to dashboard if already logged in via <code>useAuthStore</code>.</p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-public">public</span>
+      <span class="page-entry-route">/cs/card/:shareSlug</span>
+      <span class="page-entry-file">src/app/[locale]/card/[shareSlug]/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Public card viewer. Fetches card by <code>shareSlug</code> via <code>getCardBySlug()</code>. Shows <code>CardPreview</code>, <code>ShareButtons</code>, QR dialog. Displays <code>card.shareCount</code> if &gt; 0. No player state — only card data.</p>
+      <div class="pill-list">
+        <span class="pill">CardPreview</span><span class="pill">ShareButtons</span><span class="pill">QRCodePanel</span><span class="pill">RarityBadge</span>
+      </div>
+      <p><strong>Services:</strong> <code>getCardBySlug(shareSlug)</code></p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-public">public</span>
+      <span class="page-entry-route">/cs/player/:slug</span>
+      <span class="page-entry-file">src/app/[locale]/player/[slug]/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Public player profile. Parallel fetch: <code>getPlayerBySlug</code> + <code>getCards</code> + <code>getAchievements</code> + <code>getUserAchievements</code> + <code>getUserDoc(p.userId)</code>. Shows public cards (filtered <code>isPublic && playerId</code>), achievement badges, <code>LevelBadge</code> with <code>getLevelTier(userLevel)</code>.</p>
+      <div class="pill-list">
+        <span class="pill">CardPreview</span><span class="pill">LevelBadge</span><span class="pill">AchievementCard</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div class="section" id="pg-auth">
+  <h2>Auth Pages</h2>
+  <p class="section-desc">Under <code>src/app/[locale]/auth/</code>. Shared layout: centered card, <code>PublicHeader</code>. All form logic in <code>use-auth-forms.ts</code>.</p>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-public">public</span>
+      <span class="page-entry-route">/cs/auth/login</span>
+      <span class="page-entry-file">src/app/[locale]/auth/login/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Email + password login via <code>useAuthForms().loginForm</code>. On success: <code>setUser(user)</code> immediately, then <code>router.push("/cs/dashboard")</code>. Race-condition fix: user written to store BEFORE navigation so <code>AppShell</code>'s guard sees a logged-in user.</p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-public">public</span>
+      <span class="page-entry-route">/cs/auth/register</span>
+      <span class="page-entry-file">src/app/[locale]/auth/register/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Email + password + display name + role selection (Player/Coach/Parent). Creates Firebase Auth user, then writes Firestore <code>users/{uid}</code> doc with <code>subscriptionTier: "free"</code>, <code>role</code>, <code>xp: 0</code>. Same race-fix pattern as login.</p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-public">public</span>
+      <span class="page-entry-route">/cs/auth/reset</span>
+      <span class="page-entry-file">src/app/[locale]/auth/reset/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Sends Firebase password-reset email. Shows success message in-page — does not navigate.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="section" id="pg-dashboard">
+  <h2>Dashboard</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/dashboard</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/dashboard/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Overview after login. Shows: stat counters (players, teams, cards, achievements), XP progress bar, recent cards grid, quick-action buttons. Reads from <code>useAuthStore</code>, <code>useCardsStore</code>, <code>usePlayersStore</code>.</p>
+      <div class="pill-list">
+        <span class="pill">XPBar</span><span class="pill">LevelBadge</span><span class="pill">CardPreview</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYERS -->
+<div class="section" id="pg-players">
+  <h2>Players</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/players</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/players/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Grid of <code>PlayerCard</code> components. Reads <code>usePlayersStore</code>. "Přidat hráče" button → <code>/players/new</code>. Player click → <code>/players/:id</code>. Shows empty state with illustration if no players.</p>
+      <div class="pill-list"><span class="pill">PlayerCard</span></div>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/players/new</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/players/new/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Player creation form + photo upload. Checks <code>canAddPlayer(tier, currentCount)</code> — shows <code>UpgradeDialog</code> if blocked. On submit: <code>createPlayer(data)</code> → <code>router.push("/players")</code>.</p>
+      <div class="pill-list"><span class="pill">PlayerForm</span><span class="pill">PhotoUpload</span><span class="pill">UpgradeDialog</span></div>
+      <p><strong>Services:</strong> <code>createPlayer()</code>, <code>uploadPlayerPhoto()</code></p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/players/:id</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/players/[playerId]/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Player detail page. Aggregate stats from <code>useAggregateStats(playerId)</code>. Lists associated cards and recent match appearances. Edit button shows <code>PlayerForm</code> in dialog.</p>
+      <div class="pill-list"><span class="pill">PlayerForm</span><span class="pill">CardPreview</span></div>
+      <p><strong>Hooks:</strong> <code>useAggregateStats(playerId)</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- TEAMS -->
+<div class="section" id="pg-teams">
+  <h2>Teams &amp; Matches</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/teams/:id</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/teams/[teamId]/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Team detail with tabs: Roster · Matches · Invite. Roster managed via <code>TeamRoster</code>, invitations via <code>InvitePanel</code> (generates shareable link with token). Match list links to <code>/teams/:id/matches/:mid</code>.</p>
+      <div class="pill-list"><span class="pill">TeamRoster</span><span class="pill">InvitePanel</span></div>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/teams/:id/matches/new</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/teams/[teamId]/matches/new/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Two-step form: (1) <code>MatchForm</code> — date, opponent, home/away, score. (2) <code>StatsEntryForm</code> — per-player goals, assists, rating (0–10), yellow/red cards, minutes played. Creates <code>matches/{matchId}</code> + subcollection <code>playerStats</code>. Triggers achievement check after save.</p>
+      <div class="pill-list"><span class="pill">MatchForm</span><span class="pill">StatsEntryForm</span></div>
+      <p><strong>Services:</strong> <code>createMatch()</code>, <code>createPlayerStat()</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- CARDS -->
+<div class="section" id="pg-cards">
+  <h2>Cards</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/cards</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/cards/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Full card collection. Filter bar (<code>CollectionFilters</code>) for rarity, player, season. View toggle: grid (<code>CollectionGrid</code> with <code>CardFlip</code>) or album (<code>SeasonAlbum</code>).</p>
+      <div class="pill-list"><span class="pill">CollectionGrid</span><span class="pill">CollectionFilters</span><span class="pill">SeasonAlbum</span><span class="pill">CardFlip</span></div>
+      <p><strong>Hooks:</strong> <code>useCollection()</code></p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/cards/new</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/cards/new/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Card generator wizard. First checks <code>canGenerateCard(tier, count)</code> — shows <code>UpgradeDialog</code> with <code>getUpgradeReason(tier, "generate")</code> if blocked. Wizard steps: (1) Select player, (2) Choose template, (3) Configure stats, (4) Generate. On completion: creates card doc with <code>aiStatus: "pending"</code>, calls Cloud Function, redirects to card detail.</p>
+      <div class="pill-list"><span class="pill">CardGeneratorWizard</span><span class="pill">UpgradeDialog</span></div>
+      <p><strong>Services:</strong> <code>createCard()</code> | <strong>Lib:</strong> <code>canGenerateCard()</code>, <code>getUpgradeReason()</code></p>
+    </div>
+  </div>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/cards/:id</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/cards/[cardId]/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Card detail. If <code>card.aiStatus === "pending" | "processing"</code>: opens <code>onSnapshot</code> on <code>cards/{cardId}</code> + shows <code>AIProgressIndicator</code>. Listener closed on <code>"done" | "error"</code>. Shows <code>CardPreview</code>, <code>ShareButtons</code>, <code>RarityBadge</code>. Edit button → <code>/cards/:id/edit</code>.</p>
+      <div class="pill-list"><span class="pill">CardPreview</span><span class="pill">ShareButtons</span><span class="pill">RarityBadge</span><span class="pill">AIProgressIndicator</span></div>
+      <p><strong>Hooks:</strong> <code>useAIGeneration(cardId)</code> | <strong>Lib:</strong> <code>onSnapshot</code> (direct, one exception to the no-direct-db rule — via hook)</p>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div class="section" id="pg-editor">
+  <h2>Card Editor</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/cards/:id/edit</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/cards/[cardId]/edit/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Full Konva canvas editor. Stage dimensions 420×588 px. Layer order (bottom→top): Background → Template → Photo → Stats → Text → Effects → Overlay. Save: <code>exportCardToStorage(stage, cardId)</code> → updates <code>card.imageUrl</code>. Toolbar handles undo/redo/export.</p>
+      <div class="pill-list">
+        <span class="pill">CardEditorCanvas</span><span class="pill">EditorToolbar</span>
+        <span class="pill">DesignPanel</span><span class="pill">ContentPanel</span><span class="pill">EffectsPanel</span>
+      </div>
+      <p><strong>Hooks:</strong> <code>useCardEditor()</code> | <strong>Lib:</strong> <code>cardExport.ts</code>, <code>konvaEffects.ts</code></p>
+    </div>
+  </div>
+
+  <h3>Editor component responsibilities</h3>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th><th>File</th></tr></thead>
+    <tbody>
+      <tr><td><code>CardEditorCanvas</code></td><td>Konva Stage + all layers, initialized once in useEffect via useRef</td><td><code>editor/CardEditorCanvas.tsx</code></td></tr>
+      <tr><td><code>EditorToolbar</code></td><td>Save, export PNG, undo/redo buttons</td><td><code>editor/EditorToolbar.tsx</code></td></tr>
+      <tr><td><code>DesignPanel</code></td><td>Background color picker, template selector</td><td><code>editor/DesignPanel.tsx</code></td></tr>
+      <tr><td><code>ContentPanel</code></td><td>Player name, position, number text fields; photo position slider</td><td><code>editor/ContentPanel.tsx</code></td></tr>
+      <tr><td><code>EffectsPanel</code></td><td>Toggle effects: Gold Foil, Hologram, Neon, LED, Fire (Konva filters)</td><td><code>editor/EffectsPanel.tsx</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- STUDIO -->
+<div class="section" id="pg-studio">
+  <h2>AI Studio</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/studio</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/studio/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Tool picker grid. Checks <code>canUseAI(tier, aiCreditsUsedThisMonth)</code>. Premium tools (Style Transfer, Background Removal) show <code>UpgradeDialog</code> if tier insufficient. Each tool card opens its panel. <code>onComplete={(_url) =&gt; ...}</code> — URL prefixed to suppress unused-var warning.</p>
+      <div class="pill-list">
+        <span class="pill">StyleTransferPanel</span><span class="pill">BackgroundRemover</span><span class="pill">AIProgressIndicator</span><span class="pill">UpgradeDialog</span>
+      </div>
+      <p><strong>Flow:</strong> Client → Cloud Function HTTP endpoint → <code>{ jobId }</code> → <code>onSnapshot</code> on <code>cards/{cardId}</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT -->
+<div class="section" id="pg-print">
+  <h2>Print Center</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/print</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/print/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>PDF export. Checks <code>canPrint(tier)</code> — shows upgrade wall for free tier. Step 1: <code>PrintFormatSelector</code> (4 formats, some tier-gated). Step 2: <code>CardSelectionGrid</code> (max cards per format). Export: <code>exportCardsToPDF(selectedCards, format, onProgress)</code> — progress shown as % during PDF generation. <code>handleFormatChange</code> trims selection if new format allows fewer cards.</p>
+      <div class="pill-list"><span class="pill">PrintFormatSelector</span><span class="pill">CardSelectionGrid</span><span class="pill">UpgradeDialog</span></div>
+      <p><strong>Lib:</strong> <code>printEngine.ts</code> — <code>PRINT_FORMATS</code>, <code>LAYOUTS</code>, <code>exportCardsToPDF()</code></p>
+    </div>
+  </div>
+
+  <h3>Print formats</h3>
+  <table>
+    <thead><tr><th>Format ID</th><th>Layout</th><th>Card size</th><th>Required tier</th></tr></thead>
+    <tbody>
+      <tr><td><code>a4-9</code></td><td>A4 portrait, 3×3</td><td>63.5 × 88.9 mm</td><td>Premium+</td></tr>
+      <tr><td><code>a4-4</code></td><td>A4 portrait, 2×2</td><td>85 × 119 mm</td><td>Premium+</td></tr>
+      <tr><td><code>sticker</code></td><td>A4 portrait, 3×3 + cut marks</td><td>63.5 × 88.9 mm</td><td>Team+</td></tr>
+      <tr><td><code>album</code></td><td>A4 landscape, 3×2</td><td>~90 × 126 mm</td><td>Team+</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ACHIEVEMENTS -->
+<div class="section" id="pg-achievements">
+  <h2>Achievements &amp; XP</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/achievements</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/achievements/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Achievement gallery. <code>XPBar</code> at top showing current level + progress to next. <code>LevelBadge</code> with tier label. Grid of <code>AchievementCard</code> — locked ones shown greyed out. Reads global achievement definitions + user's earned achievements from <code>useAchievementsStore</code>.</p>
+      <div class="pill-list"><span class="pill">XPBar</span><span class="pill">LevelBadge</span><span class="pill">AchievementCard</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="section" id="pg-settings">
+  <h2>Settings</h2>
+
+  <div class="page-entry">
+    <div class="page-entry-header">
+      <span class="tag tag-auth">auth</span>
+      <span class="page-entry-route">/cs/settings/subscription</span>
+      <span class="page-entry-file">src/app/[locale]/(protected)/settings/subscription/page.tsx</span>
+    </div>
+    <div class="page-entry-body">
+      <p>Tier comparison: Free · Premium (149 CZK/mo) · Team (399 CZK/mo) · Club (custom). Feature table. Current tier highlighted. Upgrade button shows toast: <em>"Platby budou brzy dostupné. Kontaktujte nás na info@fotbalove-karticky.cz"</em> (payments not yet integrated).</p>
+      <p><strong>Data:</strong> <code>TIER_LIMITS</code>, <code>TIER_PRICES_CZK</code> from <code>subscriptionEngine.ts</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── COMPONENTS ─────────────────────────────── -->
+
+<div class="section" id="comp-layout">
+  <h2>Layout Components</h2>
+  <p class="section-desc"><code>src/components/layout/</code></p>
+
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th><th>Key details</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>AppShell.tsx</code></td>
+        <td>Auth guard + main layout wrapper</td>
+        <td>Reads <code>useAuthStore</code>. If <code>loading</code>: spinner. If no user: redirect to <code>/auth/login</code>. Renders <code>AppSidebar</code> + <code>AppTopbar</code> + <code>AppBottomNav</code>. Wraps <code>&lt;main&gt;</code> children in <code>&lt;PageTransition&gt;</code>.</td>
+      </tr>
+      <tr>
+        <td><code>AppSidebar.tsx</code></td>
+        <td>Desktop left navigation</td>
+        <td>Icon + label links for all main routes. Active state from <code>usePathname()</code>. Logo at top. User avatar + logout at bottom.</td>
+      </tr>
+      <tr>
+        <td><code>AppTopbar.tsx</code></td>
+        <td>Mobile header</td>
+        <td>Page title, user avatar dropdown, dark-mode toggle. Hidden on desktop (sidebar takes over).</td>
+      </tr>
+      <tr>
+        <td><code>AppBottomNav.tsx</code></td>
+        <td>Mobile bottom tab bar</td>
+        <td>5 primary tabs: Dashboard, Players, Teams, Cards, Studio. Icon + label. Active tab highlighted gold. Visible on mobile only.</td>
+      </tr>
+      <tr>
+        <td><code>PublicHeader.tsx</code></td>
+        <td>Header for public/auth pages</td>
+        <td>Logo, locale switcher, login + register links. Dark-mode toggle.</td>
+      </tr>
+      <tr>
+        <td><code>PageTransition.tsx</code></td>
+        <td>Route change animation</td>
+        <td>Framer Motion <code>AnimatePresence mode="wait"</code> keyed on <code>usePathname()</code>. <code>opacity 0→1, y 6→0</code> on enter; <code>opacity 1→0, y 0→-4</code> on exit. 160ms easeOut.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-card">
+  <h2>Card Components</h2>
+  <p class="section-desc"><code>src/components/card/</code></p>
+
+  <table>
+    <thead><tr><th>Component</th><th>Props</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>CardPreview.tsx</code></td>
+        <td><code>card, player?, size</code></td>
+        <td>Static CSS card at sizes: <code>sm | md | lg</code>. Shows <code>card.imageUrl</code> if available, else placeholder with player photo + stats. Used in grids, detail pages, public viewer.</td>
+      </tr>
+      <tr>
+        <td><code>CardFlip.tsx</code></td>
+        <td><code>card, player?, onClick?</code></td>
+        <td>3D flip on hover. CSS <code>perspective: 900px; preserve-3d</code>. Framer Motion <code>rotateY: 0→180</code>, 450ms. Front: <code>CardPreview</code>. Back: <code>RarityBadge</code> + stats grid (G/A/★) + card type.</td>
+      </tr>
+      <tr>
+        <td><code>RarityBadge.tsx</code></td>
+        <td><code>rarity</code></td>
+        <td>Color-coded pill: Common (zinc) · Rare (blue) · Epic (purple) · Legendary (gold). Colors via <code>getRarityColor()</code>.</td>
+      </tr>
+      <tr>
+        <td><code>CardGeneratorWizard.tsx</code></td>
+        <td><code>onComplete</code></td>
+        <td>Multi-step form. Steps tracked with local state. Uses <code>react-hook-form</code> per step. Calls <code>createCard()</code> on finish.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-editor">
+  <h2>Editor Components</h2>
+  <p class="section-desc"><code>src/components/editor/</code> — all require the Konva stage ref from <code>useCardEditor()</code>.</p>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>CardEditorCanvas</code></td><td>Konva <code>Stage</code> initialized once via <code>useRef</code> in <code>useEffect</code>. Never recreated. Manages 7 layers. Exposes <code>stage</code> ref for export.</td></tr>
+      <tr><td><code>EditorToolbar</code></td><td>Save (triggers <code>exportCardToStorage()</code>), export PNG download, undo/redo stack controls.</td></tr>
+      <tr><td><code>DesignPanel</code></td><td>Background gradient/solid color picker, template switcher (reads available templates from store).</td></tr>
+      <tr><td><code>ContentPanel</code></td><td>Text input fields (player name, number, position). Photo drag-to-reposition. Font size sliders.</td></tr>
+      <tr><td><code>EffectsPanel</code></td><td>Toggle switches for 5 Konva filter effects. Applies via <code>applyEffect(layer, effectType)</code> from <code>konvaEffects.ts</code>.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-player">
+  <h2>Player Components</h2>
+  <p class="section-desc"><code>src/components/player/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Props</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>PlayerCard</code></td><td><code>player, onClick?</code></td><td>Compact card: photo avatar, name, position, team name, card count. Used in player list grid.</td></tr>
+      <tr><td><code>PlayerForm</code></td><td><code>initialData?, onSubmit</code></td><td><code>react-hook-form + zod</code>. Fields: firstName, lastName, position, dateOfBirth, teamId, jerseyNumber, isPublic.</td></tr>
+      <tr><td><code>PhotoUpload</code></td><td><code>currentUrl?, onUploaded</code></td><td>File input → <code>uploadPlayerPhoto(uid, file)</code> → Firebase Storage → returns URL. Shows live preview during upload.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-team">
+  <h2>Team Components</h2>
+  <p class="section-desc"><code>src/components/team/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>TeamCard</code></td><td>Team summary: name, division, player count, coach name. Click → team detail.</td></tr>
+      <tr><td><code>TeamForm</code></td><td>react-hook-form + zod. Fields: name, division, season, ageGroup, homeColor, awayColor.</td></tr>
+      <tr><td><code>TeamRoster</code></td><td>Table of team members with avatar, name, position, jersey number. Remove button (coach only).</td></tr>
+      <tr><td><code>InvitePanel</code></td><td>Generates shareable invite link with token. Copy-to-clipboard button. QR code option.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-collection">
+  <h2>Collection Components</h2>
+  <p class="section-desc"><code>src/components/collection/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>CollectionGrid</code></td><td>Responsive card grid. Each card wrapped in <code>CardFlip</code> (hover 3D) or plain <code>CardPreview</code>. Supports pagination.</td></tr>
+      <tr><td><code>CollectionFilters</code></td><td>Filter bar: rarity (multi-select), player (dropdown), season (dropdown), sort order. Emits filter state via callback.</td></tr>
+      <tr><td><code>SeasonAlbum</code></td><td>Groups cards by <code>card.season</code>. Renders each season as a section with header and card grid.</td></tr>
+      <tr><td><code>CardHologramEffect</code></td><td>CSS overlay with animated rainbow shimmer for Legendary cards. Applied as absolute positioned div over <code>CardPreview</code>.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-achievements">
+  <h2>Achievement Components</h2>
+  <p class="section-desc"><code>src/components/achievements/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Props</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>AchievementCard</code></td><td><code>achievement, earned?, progress?</code></td><td>Icon, title, description, XP reward. Greyed out + lock icon if not earned. Progress bar if <code>progress</code> given.</td></tr>
+      <tr><td><code>XPBar</code></td><td><code>xp, level</code></td><td>Animated progress bar showing XP to next level. Level number on left, next milestone on right.</td></tr>
+      <tr><td><code>LevelBadge</code></td><td><code>level, tier</code></td><td>Level number + tier label (Začátečník / Nováček / Hráč / Veterán / Legenda). Color-coded by tier.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-studio">
+  <h2>Studio Components</h2>
+  <p class="section-desc"><code>src/components/studio/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>AIProgressIndicator</code></td><td>Animated spinner + status label for aiStatus: pending / processing / done / error. Used during AI generation wait.</td></tr>
+      <tr><td><code>BackgroundRemover</code></td><td>Upload player photo → POST to Cloud Function → onSnapshot → shows before/after. Calls <code>useAIGeneration()</code>.</td></tr>
+      <tr><td><code>StyleTransferPanel</code></td><td>Style grid (watercolor, comic, oil painting, etc.) → select + confirm → Cloud Function call → result displayed.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-share">
+  <h2>Share &amp; Print Components</h2>
+  <p class="section-desc"><code>src/components/share/</code> · <code>src/components/print/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>ShareButtons</code></td><td>Primary "Sdílet kartičku" button + 2×2 grid (Facebook, WhatsApp, copy link, download) + TikTok full-width. Inline SVG for Facebook and TikTok icons (lucide-react has no brand icons). Every successful share calls <code>incrementShareCount()</code>.</td></tr>
+      <tr><td><code>QRCodePanel</code></td><td><code>QRCodeCanvas</code> from qrcode.react (size 160, dark on white). Download: canvas <code>.toDataURL()</code> → anchor click trigger.</td></tr>
+      <tr><td><code>PrintFormatSelector</code></td><td>4 format cards with SVG <code>FormatDiagram</code> mini-previews. Locked formats (insufficient tier) shown with <code>cursor-not-allowed opacity-50</code> + tier badge.</td></tr>
+      <tr><td><code>CardSelectionGrid</code></td><td>Checkboxes on card thumbnails. Props: <code>cards, selected: Set&lt;string&gt;, maxSelectable, onToggle</code>. Disables selection beyond <code>maxSelectable</code>.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-subscription">
+  <h2>Subscription Components</h2>
+  <p class="section-desc"><code>src/components/subscription/</code></p>
+  <div class="box">
+    <div class="box-title">UpgradeDialog</div>
+    <p>3-column comparison dialog (Premium / Team / Club). "Nejoblíbenější" badge on premium. CTA uses <code>const router = useRouter()</code> with <code>onClick={() =&gt; { onOpenChange(false); router.push(path); }}</code> — NOT <code>asChild</code> (Button does not support it).</p>
+  </div>
+</div>
+
+<div class="section" id="comp-providers">
+  <h2>Providers</h2>
+  <p class="section-desc"><code>src/components/providers/</code></p>
+  <table>
+    <thead><tr><th>Component</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>AuthProvider.tsx</code></td><td>Wraps app, listens to <code>onAuthStateChanged</code> → calls <code>getUserDoc(uid)</code> → <code>setUser(userDoc)</code>. Contains render-null <code>FCMInit</code> sub-component that calls <code>useFCM(user.uid)</code> only when user is logged in.</td></tr>
+      <tr><td><code>ThemeProvider.tsx</code></td><td>Wraps <code>next-themes</code> <code>ThemeProvider</code> with <code>attribute="class"</code>, <code>defaultTheme="dark"</code>.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="comp-ui">
+  <h2>UI Primitives (shadcn/ui)</h2>
+  <p class="section-desc"><code>src/components/ui/</code> — do not edit directly. Add new: <code>npx shadcn@latest add &lt;component&gt;</code>. Style: <code>base-nova</code>. All use CSS variables + oklch colors.</p>
+  <div class="pill-list">
+    <span class="pill">accordion</span><span class="pill">alert-dialog</span><span class="pill">avatar</span><span class="pill">badge</span>
+    <span class="pill">button</span><span class="pill">card</span><span class="pill">checkbox</span><span class="pill">dialog</span>
+    <span class="pill">dropdown-menu</span><span class="pill">input</span><span class="pill">label</span><span class="pill">popover</span>
+    <span class="pill">progress</span><span class="pill">scroll-area</span><span class="pill">select</span><span class="pill">separator</span>
+    <span class="pill">sheet</span><span class="pill">skeleton</span><span class="pill">slider</span><span class="pill">switch</span>
+    <span class="pill">tabs</span><span class="pill">textarea</span><span class="pill">tooltip</span>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── BUSINESS LOGIC ─────────────────────────────── -->
+
+<div class="section" id="lib-firebase">
+  <h2>Firebase Init</h2>
+  <p class="section-desc"><code>src/lib/firebase.ts</code></p>
+  <p>Calls <code>initializeApp(config)</code> once (idempotent). Exports: <code>auth</code> (FirebaseAuth), <code>db</code> (Firestore), <code>storage</code> (FirebaseStorage). This is the ONLY file that may import from <code>firebase/*</code>. Config read from <code>NEXT_PUBLIC_FIREBASE_*</code> env vars.</p>
+</div>
+
+<div class="section" id="lib-services">
+  <h2>Firestore Services</h2>
+  <p class="section-desc"><code>src/lib/firebaseServices.ts</code> — the only file that imports <code>db</code> from <code>firebase.ts</code>.</p>
+
+  <h3>User operations</h3>
+  <pre>getUserDoc(uid)                 → User | null
+updateUserDoc(uid, partial)     → void
+createUserDoc(uid, data)        → void</pre>
+
+  <h3>Player operations</h3>
+  <pre>getPlayers(userId)              → Player[]
+getPlayerBySlug(slug)           → Player | null
+createPlayer(data)              → string  <span class="c"># returns docId</span>
+updatePlayer(id, partial)       → void
+deletePlayer(id)                → void
+uploadPlayerPhoto(uid, file)    → string  <span class="c"># returns Storage URL</span></pre>
+
+  <h3>Team operations</h3>
+  <pre>getTeams(userId)                → Team[]
+createTeam(data)                → string
+updateTeam(id, partial)         → void
+addTeamMember(teamId, userId)   → void</pre>
+
+  <h3>Match operations</h3>
+  <pre>getMatches(teamId)              → Match[]
+createMatch(data)               → string
+createPlayerStat(matchId, data) → void
+getPlayerStats(matchId)         → PlayerStat[]</pre>
+
+  <h3>Card operations</h3>
+  <pre>getCards(userId)                → Card[]
+getCardBySlug(shareSlug)        → Card | null
+createCard(data)                → string
+updateCard(id, partial)         → void
+deleteCard(id)                  → void</pre>
+
+  <h3>Achievement operations</h3>
+  <pre>getAchievements()               → Achievement[]   <span class="c"># global definitions</span>
+getUserAchievements(uid)        → UserAchievement[]
+<span class="c"># Writes via Cloud Functions admin SDK only</span></pre>
+</div>
+
+<div class="section" id="lib-card">
+  <h2>Card Engine</h2>
+  <p class="section-desc"><code>src/lib/cardEngine.ts</code></p>
+  <table>
+    <thead><tr><th>Export</th><th>Signature</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>calculateRarity</code></td><td><code>(stats) → Rarity</code></td><td>Derives Common/Rare/Epic/Legendary from aggregate performance (goals, assists, rating thresholds).</td></tr>
+      <tr><td><code>generateCardStats</code></td><td><code>(playerStats[]) → CardStats</code></td><td>Aggregates match stats into card display stats.</td></tr>
+      <tr><td><code>canGenerateCard</code></td><td><code>(user) → boolean</code></td><td>Delegates to <code>subscriptionEngine.canGenerateCard(user.subscriptionTier, user.cardsGeneratedThisMonth ?? 0)</code>.</td></tr>
+      <tr><td><code>CARD_TYPE_LABELS</code></td><td><code>Record&lt;CardType, string&gt;</code></td><td>Czech labels for card types (Base, Season, Achievement, etc.)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="lib-subscription">
+  <h2>Subscription Engine</h2>
+  <p class="section-desc"><code>src/lib/subscriptionEngine.ts</code> — single source of truth for all tier limits.</p>
+
+  <h3>TIER_LIMITS</h3>
+  <table>
+    <thead><tr><th>Tier</th><th>Cards/mo</th><th>AI credits/mo</th><th>Print</th><th>Players</th><th>Teams</th></tr></thead>
+    <tbody>
+      <tr><td>free</td><td>3</td><td>2</td><td>❌</td><td>3</td><td>1</td></tr>
+      <tr><td>premium</td><td>20</td><td>20</td><td>a4-9, a4-4</td><td>unlimited</td><td>3</td></tr>
+      <tr><td>team</td><td>50</td><td>50</td><td>all formats</td><td>unlimited</td><td>unlimited</td></tr>
+      <tr><td>club</td><td>unlimited</td><td>unlimited</td><td>all + branding</td><td>unlimited</td><td>unlimited</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Gate functions</h3>
+  <pre>canGenerateCard(tier, count)    → boolean
+canUseAI(tier, count)           → boolean
+canPrint(tier)                  → boolean
+canUsePrintFormat(tier, format) → boolean
+canAddPlayer(tier, count)       → boolean
+canAddTeam(tier, count)         → boolean
+getUpgradeReason(tier, feature) → string   <span class="c"># Czech UI message</span>
+requiredTierFor(feature)        → SubscriptionTier</pre>
+</div>
+
+<div class="section" id="lib-xp">
+  <h2>XP &amp; Achievement Engine</h2>
+  <p class="section-desc"><code>src/lib/xpEngine.ts</code> · <code>src/lib/achievementEngine.ts</code></p>
+
+  <div class="two-col">
+    <div>
+      <h3>XP Engine</h3>
+      <pre>addXP(uid, amount)          → void
+getLevelFromXP(xp)          → number
+getUnlockables(level)       → Unlockable[]</pre>
+      <p>Level progression: XP thresholds increase exponentially. Each level unlocks card styles, effects, or features. <code>getLevelTier(level)</code> in <code>utils.ts</code> returns tier string (Začátečník → Legenda).</p>
+    </div>
+    <div>
+      <h3>Achievement Engine</h3>
+      <pre>checkAchievements(user, event) → Achievement[]</pre>
+      <p>Pure function — no side effects. Called after every significant action (card created, match recorded, etc.). Returns list of newly earned achievements. Caller writes to <code>userAchievements</code> via Cloud Function (admin SDK bypasses Firestore rules).</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="lib-print">
+  <h2>Print Engine</h2>
+  <p class="section-desc"><code>src/lib/printEngine.ts</code></p>
+  <pre>exportCardsToPDF(
+  cards: Card[],
+  format: PrintFormat,
+  onProgress: (pct: number) =&gt; void
+): Promise&lt;void&gt;</pre>
+  <p>Fetches each card image via <code>fetchAsDataUrl(card.imageUrl)</code> (fetch → FileReader → base64). Renders cards on jsPDF pages using computed <code>LAYOUTS[format]</code> dimensions. For <code>sticker</code> format, calls <code>drawCutMark(doc, x, y)</code> at each card corner. Increments <code>user.printCount</code> on completion.</p>
+</div>
+
+<div class="section" id="lib-share">
+  <h2>Share Utils</h2>
+  <p class="section-desc"><code>src/lib/shareUtils.ts</code></p>
+  <pre>getCardShareUrl(shareSlug, locale)     → string
+getPlayerProfileUrl(slug, locale)      → string
+buildFacebookShareUrl(url)             → string
+buildWhatsAppShareUrl(url, text)       → string
+buildMessengerShareUrl(url)            → string
+incrementShareCount(cardId, current)   → Promise&lt;void&gt;  <span class="c"># calls updateCard</span></pre>
+</div>
+
+<div class="section" id="lib-konva">
+  <h2>Konva &amp; Export</h2>
+  <p class="section-desc"><code>src/lib/konvaEffects.ts</code> · <code>src/lib/cardExport.ts</code></p>
+  <div class="two-col">
+    <div>
+      <h3>konvaEffects.ts</h3>
+      <pre>applyEffect(layer, effectType)</pre>
+      <p>Sets Konva <code>Filter</code> objects on the effects layer. Effect types: <code>gold-foil</code> (Brighten + Enhance), <code>hologram</code> (HSL shift animation), <code>neon</code> (Blur + Brighten), <code>led</code> (Pixelate), <code>fire</code> (Emboss + colorize). Removes previous filters before applying new ones.</p>
+    </div>
+    <div>
+      <h3>cardExport.ts</h3>
+      <pre>exportCardToStorage(stage, cardId)
+  → Promise&lt;string&gt;  <span class="c"># imageUrl</span></pre>
+      <p>Calls <code>stage.toBlob({ pixelRatio: 3 })</code> for 1260×1764px output. Uploads to <code>cards/{cardId}/output.png</code> in Firebase Storage. Updates <code>card.imageUrl</code>. Also generates thumbnail via <code>html-to-image</code> on CSS card component → <code>cards/{cardId}/thumbnail.png</code>.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="lib-utils">
+  <h2>Utilities</h2>
+  <p class="section-desc"><code>src/lib/utils.ts</code></p>
+  <table>
+    <thead><tr><th>Export</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>cn(...classes)</code></td><td>Tailwind class merge (clsx + tailwind-merge)</td></tr>
+      <tr><td><code>formatDate(date)</code></td><td>Czech locale date string via date-fns</td></tr>
+      <tr><td><code>getRarityColor(rarity)</code></td><td>Returns Tailwind class string for rarity badge color</td></tr>
+      <tr><td><code>getLevelFromXP(xp)</code></td><td>Numeric level from XP amount</td></tr>
+      <tr><td><code>getLevelTier(level)</code></td><td>Czech tier label: Začátečník / Nováček / Hráč / Veterán / Legenda</td></tr>
+      <tr><td><code>getFirebaseErrorMessage(code)</code></td><td>Maps Firebase error codes to Czech user-friendly messages</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ─────────────────────────────── STATE ─────────────────────────────── -->
+<div class="section" id="state">
+  <h2>Zustand Stores</h2>
+  <p class="section-desc"><code>src/store/</code> — two stores, no <code>combine()</code>, no other stores.</p>
+
+  <h3>authStore.ts — <code>useAuthStore</code></h3>
+  <table>
+    <thead><tr><th>Field / Action</th><th>Type</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>user</code></td><td><code>User | null</code></td><td>Full Firestore user doc (not Firebase Auth user)</td></tr>
+      <tr><td><code>loading</code></td><td><code>boolean</code></td><td>True while waiting for onAuthStateChanged to fire</td></tr>
+      <tr><td><code>setUser(user)</code></td><td>action</td><td>Set after login/register AND before router.push (race-condition fix)</td></tr>
+      <tr><td><code>setLoading(bool)</code></td><td>action</td><td>Set to true at startup, false after auth state resolved</td></tr>
+      <tr><td><code>logout()</code></td><td>action</td><td>Calls Firebase Auth signOut, nulls user</td></tr>
+    </tbody>
+  </table>
+
+  <h3>appStore.ts — domain stores</h3>
+  <p>Five separate <code>create()</code> calls re-exported from one file. Each follows the same shape: <code>items[], loading, error, fetch(), create(), update(), delete()</code>.</p>
+  <div class="pill-list">
+    <span class="pill">usePlayersStore</span>
+    <span class="pill">useTeamsStore</span>
+    <span class="pill">useMatchesStore</span>
+    <span class="pill">useCardsStore</span>
+    <span class="pill">useAchievementsStore</span>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── HOOKS ─────────────────────────────── -->
+<div class="section" id="hooks">
+  <h2>Custom Hooks</h2>
+  <p class="section-desc"><code>src/hooks/</code></p>
+  <table>
+    <thead><tr><th>Hook</th><th>Returns</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>use-auth-forms.ts</code></td>
+        <td><code>{ loginForm, registerForm, resetForm }</code></td>
+        <td>react-hook-form + zod. All Firebase Auth calls (signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail). Error messages via <code>getFirebaseErrorMessage()</code>.</td>
+      </tr>
+      <tr>
+        <td><code>use-aggregate-stats.ts</code></td>
+        <td><code>{ goals, assists, rating, gamesPlayed, ... }</code></td>
+        <td>Reads all <code>playerStats</code> for a given <code>playerId</code> across all matches. Computes totals and averages.</td>
+      </tr>
+      <tr>
+        <td><code>use-card-editor.ts</code></td>
+        <td><code>{ stageRef, layers, activeLayer, setActiveLayer, undo, redo }</code></td>
+        <td>Manages Konva stage ref, layer references, history stack for undo/redo.</td>
+      </tr>
+      <tr>
+        <td><code>use-collection.ts</code></td>
+        <td><code>{ filteredCards, filters, setFilters, viewMode, setViewMode }</code></td>
+        <td>Applies filter/sort logic to cards from <code>useCardsStore</code>. Manages grid vs album view toggle.</td>
+      </tr>
+      <tr>
+        <td><code>use-ai-generation.ts</code></td>
+        <td><code>{ status, imageUrl, error }</code></td>
+        <td>Opens <code>onSnapshot</code> on <code>cards/{cardId}</code>. Polls <code>aiStatus</code>. Closes listener when status is <code>"done" | "error"</code>. Used on card detail page during AI wait.</td>
+      </tr>
+      <tr>
+        <td><code>use-share.ts</code></td>
+        <td><code>{ share, sharing, shareUrl, shareText }</code></td>
+        <td><code>share(platform)</code> handles: native (Web Share API → clipboard fallback), copy, facebook, whatsapp, messenger, tiktok (copies + opens), download. Calls <code>incrementShareCount</code> on success.</td>
+      </tr>
+      <tr>
+        <td><code>use-fcm.ts</code></td>
+        <td><code>{ permission, requestPermission }</code></td>
+        <td>Lazy permission init. If already granted on mount, calls <code>initFCM(uid)</code> (pure side-effect: SW register, getToken, Firestore write, onMessage toast). No <code>setState</code> in useEffect body (ESLint rule). <code>setPermission</code> only in <code>requestPermission</code> handler.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ─────────────────────────────── TYPES ─────────────────────────────── -->
+<div class="section" id="types">
+  <h2>Types</h2>
+  <p class="section-desc"><code>src/types/index.ts</code> — all domain types in one file.</p>
+  <div class="two-col">
+    <pre><span class="c">// Core entities</span>
+User
+Player
+Team
+TeamMember
+Match
+PlayerStat
+Card
+CardStats
+Collection
+Achievement
+UserAchievement
+Template
+Club</pre>
+    <pre><span class="c">// Enums / unions</span>
+UserRole = "guest"|"player"|"parent"|"coach"|"clubAdmin"|"superAdmin"
+SubscriptionTier = "free"|"premium"|"team"|"club"
+Rarity = "common"|"rare"|"epic"|"legendary"
+CardType = "base"|"season"|"achievement"|"special"|"club"
+AIStatus = "pending"|"processing"|"done"|"error"
+PrintFormat = "a4-9"|"a4-4"|"sticker"|"album"
+CardEffect = "gold-foil"|"hologram"|"neon"|"led"|"fire"</pre>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── i18n ─────────────────────────────── -->
+<div class="section" id="i18n">
+  <h2>i18n</h2>
+  <p class="section-desc">next-intl 4. Czech primary (<code>cs</code>), English secondary (<code>en</code>). All routes under <code>/[locale]/</code>.</p>
+
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/proxy.ts</code></td><td>next-intl middleware. MUST be named <code>proxy.ts</code> not <code>middleware.ts</code>.</td></tr>
+      <tr><td><code>src/i18n/routing.ts</code></td><td>Defines <code>locales: ["cs", "en"]</code>, <code>defaultLocale: "cs"</code>.</td></tr>
+      <tr><td><code>src/i18n/request.ts</code></td><td><code>getRequestConfig</code> — loads correct message file per request.</td></tr>
+      <tr><td><code>messages/cs.json</code></td><td>Czech strings (primary, always complete).</td></tr>
+      <tr><td><code>messages/en.json</code></td><td>English strings.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Usage in components</h3>
+  <pre><span class="k">const</span> t = useTranslations(<span class="s">'namespace'</span>);
+<span class="c">// Never hardcode Czech or English strings in .tsx files</span>
+return &lt;p&gt;{t(<span class="s">'key'</span>)}&lt;/p&gt;</pre>
+
+  <p>Locale prefix is always on (<code>/cs/...</code>, <code>/en/...</code>). Use <code>useLocale()</code> to read current locale. Use <code>useRouter()</code> from <code>next-intl/navigation</code> (not <code>next/navigation</code>) for locale-aware pushes.</p>
+</div>
+
+<!-- ─────────────────────────────── FIREBASE CONFIG ─────────────────────────────── -->
+<div class="section" id="firebase-config">
+  <h2>Firebase Configuration</h2>
+  <p class="section-desc">Project ID: <code>fcards-web</code></p>
+
+  <h3>Environment variables</h3>
+  <pre><span class="c"># .env (client-side — NEXT_PUBLIC_ prefix required)</span>
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN        <span class="c"># fcards-web.firebaseapp.com</span>
+NEXT_PUBLIC_FIREBASE_PROJECT_ID         <span class="c"># fcards-web</span>
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET     <span class="c"># fcards-web.firebasestorage.app</span>
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+NEXT_PUBLIC_FIREBASE_VAPID_KEY          <span class="c"># for FCM web push</span>
+
+<span class="c"># Cloud Functions environment ONLY (never in .env.local)</span>
+OPENAI_API_KEY
+REPLICATE_API_KEY</pre>
+
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>.firebaserc</code></td><td>Project alias: <code>"default": "fcards-web"</code></td></tr>
+      <tr><td><code>firebase.json</code></td><td>Deploy config: Firestore, Storage, Functions (predeploy: build), emulator ports</td></tr>
+      <tr><td><code>firestore.indexes.json</code></td><td>6 composite indexes + COLLECTION_GROUP index for player slug search</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Deploy commands</h3>
+  <pre>firebase deploy --only firestore          <span class="c"># rules + indexes</span>
+firebase deploy --only storage
+cd functions && npm install && npm run deploy
+firebase emulators:start                  <span class="c"># local dev (ports in firebase.json)</span></pre>
+</div>
+
+<!-- ─────────────────────────────── SECURITY ─────────────────────────────── -->
+<div class="section" id="security">
+  <h2>Security Rules</h2>
+
+  <h3>Firestore (<code>firestore.rules</code>)</h3>
+  <p>Key patterns:</p>
+  <div class="hl">
+    <strong>users/{uid}</strong>
+    <span>Read: owner only. Write: owner only. Role cannot be self-upgraded.</span>
+  </div>
+  <div class="hl">
+    <strong>players/{playerId}</strong>
+    <span>Read: owner or public (isPublic==true). Write: owner only.</span>
+  </div>
+  <div class="hl">
+    <strong>cards/{cardId}</strong>
+    <span>Owner: full access. Public cards: anyone signed-in may increment shareCount by exactly 1. Rule: <code>diff.affectedKeys().hasOnly(['shareCount','updatedAt']) &amp;&amp; shareCount == old.shareCount + 1</code>.</span>
+  </div>
+  <div class="hl">
+    <strong>userAchievements/{uid}/{achievementId}</strong>
+    <span><code>allow write: if false</code> — written only by Cloud Functions admin SDK, which bypasses rules.</span>
+  </div>
+
+  <h3>Storage (<code>storage.rules</code>)</h3>
+  <div class="hl">
+    <strong>users/{uid}/photos/</strong>
+    <span>Owner read/write. Max 10 MB. Content-type must match <code>image/.*</code>.</span>
+  </div>
+  <div class="hl">
+    <strong>cards/{cardId}/</strong>
+    <span>Owner read/write. Max 20 MB. Image only.</span>
+  </div>
+  <div class="hl">
+    <strong>templates/{templateId}/</strong>
+    <span>Public read. <code>allow write: if false</code> — written by admin scripts only.</span>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── FUNCTIONS ─────────────────────────────── -->
+<div class="section" id="functions">
+  <h2>Cloud Functions</h2>
+  <p class="section-desc"><code>functions/src/index.ts</code> — separate <code>package.json</code> in <code>functions/</code>. Node 20, Firebase Functions v2.</p>
+
+  <h3>AI functions (<code>functions/src/ai/</code>)</h3>
+  <table>
+    <thead><tr><th>Function</th><th>Trigger</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>generateCardText</code></td><td>HTTPS callable</td><td>Calls OpenAI GPT-4o-mini to generate card description text. Returns text, updates card doc.</td></tr>
+      <tr><td><code>removeBackground</code></td><td>HTTPS callable</td><td>Sends photo to Replicate API, polls result, uploads result to Storage, updates card doc.</td></tr>
+      <tr><td><code>applyStyleTransfer</code></td><td>HTTPS callable</td><td>Sends photo + style prompt to Replicate, uploads result, updates card doc with new imageUrl.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Notification functions (<code>functions/src/notifications/</code>)</h3>
+  <table>
+    <thead><tr><th>Function</th><th>Trigger</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>onCardGenerated</code></td><td>Firestore onCreate <code>cards/{id}</code></td><td>Sends FCM push to card owner when aiStatus → "done".</td></tr>
+      <tr><td><code>onAchievementEarned</code></td><td>Firestore onCreate <code>userAchievements</code></td><td>Sends FCM push notification for new achievement.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box" style="margin-top:14px">
+    <div class="box-title">Client → Cloud Function flow</div>
+    <p>1. Client: <code>POST /functionName { ...args }</code> (Firebase callable or HTTP)<br>
+       2. Function: does AI work → writes to <code>cards/{cardId}</code> with <code>aiStatus</code> + <code>imageUrl</code><br>
+       3. Client: <code>onSnapshot(cards/{cardId})</code> watching <code>aiStatus</code><br>
+       4. When <code>aiStatus === "done"</code>: read <code>card.imageUrl</code>, close listener</p>
+  </div>
+</div>
+
+<!-- ─────────────────────────────── PWA ─────────────────────────────── -->
+<div class="section" id="pwa">
+  <h2>PWA &amp; FCM</h2>
+
+  <h3>Manifest (<code>public/manifest.json</code>)</h3>
+  <p>Name: "Fotbalové Kartičky". Theme: <code>#854d0e</code> (amber-800). Background: <code>#09090b</code>. Icons: 72, 96, 128, 192, 384, 512 px at <code>public/icons/</code>. 2 shortcuts: New Card, My Collection.</p>
+
+  <h3>Service Worker (<code>public/sw.js</code>)</h3>
+  <table>
+    <thead><tr><th>Strategy</th><th>Applies to</th></tr></thead>
+    <tbody>
+      <tr><td>Cache-first</td><td><code>/_next/static/</code> — immutable Next.js chunks</td></tr>
+      <tr><td>Network-first → cache fallback</td><td>All other same-origin GET requests</td></tr>
+      <tr><td>Skip</td><td>Cross-origin, Firebase Storage, APIs</td></tr>
+    </tbody>
+  </table>
+  <p>FCM background: <code>importScripts</code> Firebase compat SDK, <code>messaging.onBackgroundMessage()</code> → <code>showNotification()</code>. Click handler: focuses existing window or opens <code>/cs</code>.</p>
+
+  <h3>FCM Hook (<code>use-fcm.ts</code>)</h3>
+  <p>ESLint constraint: no <code>setState</code> in <code>useEffect</code> body (react-hooks/set-state-in-effect). Solution: <code>initFCM()</code> is a pure async side-effect function (SW register + getToken + Firestore write + onMessage toast) — zero state updates. State (<code>permission</code>) only set in <code>requestPermission</code> event handler. Lazy <code>useState</code> initializer reads <code>Notification.permission</code> at mount.</p>
+</div>
+
+<!-- ─────────────────────────────── BUILD CONFIG ─────────────────────────────── -->
+<div class="section" id="config">
+  <h2>Build Configuration</h2>
+
+  <h3>next.config.ts</h3>
+  <p>Security headers on all routes: <code>Content-Security-Policy</code>, <code>X-Frame-Options: DENY</code>, <code>X-Content-Type-Options: nosniff</code>, <code>Referrer-Policy: strict-origin-when-cross-origin</code>, <code>Permissions-Policy</code>.</p>
+
+  <h3>tsconfig.json</h3>
+  <p>Strict mode on. Path alias: <code>@/*</code> → <code>./src/*</code>. Target: ES2017. Module: ESNext.</p>
+
+  <h3>components.json (shadcn/ui)</h3>
+  <p>Style: <code>base-nova</code>. CSS variables: enabled. Tailwind v4. Component dir: <code>src/components/ui</code>.</p>
+
+  <h3>Fonts</h3>
+  <pre><span class="k">import</span> { Inter, Oswald } <span class="k">from</span> <span class="s">"next/font/google"</span>;
+<span class="k">const</span> inter  = Inter({  variable: <span class="s">"--font-sans"</span>,    subsets: [<span class="s">"latin"</span>] });
+<span class="k">const</span> oswald = Oswald({ variable: <span class="s">"--font-display"</span>, subsets: [<span class="s">"latin"</span>] });
+<span class="c">// --font-sans    → all UI text, forms, body</span>
+<span class="c">// --font-display → card headings, player names, scores (font-display class)</span></pre>
+</div>
+
+<!-- ─────────────────────────────── PATTERNS ─────────────────────────────── -->
+<div class="section" id="patterns">
+  <h2>Patterns &amp; Gotchas</h2>
+
+  <h3>Button navigation — never use asChild</h3>
+  <div class="box">
+    <div class="box-title">shadcn Button does NOT support asChild</div>
+    <p>Always use <code>useRouter().push()</code> with <code>onClick</code>. Never wrap <code>&lt;Link&gt;</code> inside <code>&lt;Button asChild&gt;</code>.</p>
+    <pre><span class="c">// WRONG</span>
+&lt;Button asChild&gt;&lt;Link href="/foo"&gt;Go&lt;/Link&gt;&lt;/Button&gt;
+
+<span class="c">// CORRECT</span>
+<span class="k">const</span> router = useRouter();
+&lt;Button onClick={() =&gt; router.push(<span class="s">"/foo"</span>)}&gt;Go&lt;/Button&gt;</pre>
+  </div>
+
+  <h3>No setState in useEffect</h3>
+  <div class="box">
+    <div class="box-title">react-hooks/set-state-in-effect ESLint rule</div>
+    <p>Do not call <code>setState</code> inside a <code>useEffect</code> body — even indirectly via a function that internally sets state. Use lazy <code>useState</code> initializers for reads-at-mount. Keep all <code>setState</code> calls in event handlers or callbacks.</p>
+  </div>
+
+  <h3>Opacity with CSS variable colors</h3>
+  <div class="box">
+    <div class="box-title">Tailwind opacity modifiers don't work with CSS vars</div>
+    <p><code>bg-primary/50</code> does NOT work with <code>oklch()</code> CSS variable tokens.<br>Use: <code>color-mix(in oklch, var(--token) 50%, transparent)</code> in raw CSS instead.</p>
+  </div>
+
+  <h3>Race condition on registration</h3>
+  <div class="box">
+    <div class="box-title">Always setUser before router.push</div>
+    <p>After registration or login, call <code>setUser(userDoc)</code> BEFORE <code>router.push("/dashboard")</code>. AppShell checks the store synchronously — if user isn't in the store yet, it will redirect back to login.</p>
+  </div>
+
+  <h3>lucide-react has no brand icons</h3>
+  <div class="box">
+    <div class="box-title">Facebook, TikTok, WhatsApp — use inline SVGs</div>
+    <p>lucide-react removed brand icons. <code>ShareButtons.tsx</code> contains inline <code>FacebookIcon</code> and <code>TikTokIcon</code> SVG components. Do the same for any other brand icon needed.</p>
+  </div>
+
+  <h3>next-intl middleware filename</h3>
+  <div class="box">
+    <div class="box-title">src/proxy.ts — not src/middleware.ts</div>
+    <p>next-intl requires the middleware export from <code>src/proxy.ts</code>. If renamed to <code>middleware.ts</code>, locale routing breaks silently.</p>
+  </div>
+
+  <h3>Firestore writes — never import db directly</h3>
+  <div class="box">
+    <div class="box-title">All reads/writes via firebaseServices.ts</div>
+    <p>Components, stores, and hooks must never import <code>db</code> from <code>firebase.ts</code>. Only <code>src/lib/firebaseServices.ts</code> and <code>src/hooks/use-ai-generation.ts</code> (for the one real-time listener) are exceptions.</p>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll('[id]');
+  const links = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

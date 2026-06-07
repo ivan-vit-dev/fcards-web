@@ -1,0 +1,231 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "create": "Create",
+    "share": "Share",
+    "download": "Download",
+    "print": "Print",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "filter": "Filter",
+    "all": "All",
+    "error": "Error",
+    "success": "Success"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "players": "Players",
+    "teams": "Teams",
+    "cards": "Cards",
+    "studio": "AI Studio",
+    "print": "Print",
+    "achievements": "Achievements",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
+    "googleLogin": "Continue with Google",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "recentCards": "Recent cards",
+    "quickCreate": "Quick create",
+    "recentMatches": "Recent matches",
+    "xpProgress": "XP progress",
+    "level": "Level"
+  },
+  "players": {
+    "title": "Players",
+    "newPlayer": "New player",
+    "name": "Name",
+    "position": "Position",
+    "jerseyNumber": "Jersey number",
+    "birthYear": "Birth year",
+    "favoriteClub": "Favorite club",
+    "favoritePlayer": "Favorite player",
+    "positions": {
+      "goalkeeper": "Goalkeeper",
+      "defender": "Defender",
+      "midfielder": "Midfielder",
+      "forward": "Forward"
+    },
+    "stats": {
+      "goals": "Goals",
+      "assists": "Assists",
+      "matches": "Matches",
+      "rating": "Rating",
+      "cleanSheets": "Clean sheets",
+      "saves": "Saves"
+    }
+  },
+  "teams": {
+    "title": "Teams",
+    "newTeam": "New team",
+    "name": "Team name",
+    "season": "Season",
+    "ageCategory": "Age category",
+    "roster": "Roster",
+    "invite": "Invite",
+    "inviteEmail": "Invite by email",
+    "inviteLink": "Copy link",
+    "inviteQR": "QR code"
+  },
+  "matches": {
+    "title": "Matches",
+    "newMatch": "New match",
+    "opponent": "Opponent",
+    "date": "Date",
+    "venue": "Venue",
+    "result": "Result",
+    "stats": "Statistics",
+    "mvp": "MVP",
+    "status": {
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "cards": {
+    "title": "Cards",
+    "newCard": "New card",
+    "collection": "Collection",
+    "types": {
+      "match": "Match card",
+      "mvp": "MVP card",
+      "season": "Season card",
+      "achievement": "Achievement card",
+      "team": "Team card",
+      "tournament": "Tournament card",
+      "birthday": "Birthday card",
+      "farewell": "Farewell card",
+      "champion": "Champion card",
+      "rookie": "Rookie card"
+    },
+    "rarity": {
+      "common": "Common",
+      "uncommon": "Uncommon",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary",
+      "mythic": "Mythic",
+      "limited": "Limited Edition"
+    },
+    "effects": {
+      "goldFoil": "Gold foil",
+      "hologram": "Hologram",
+      "neon": "Neon",
+      "led": "LED",
+      "fire": "Fire"
+    }
+  },
+  "editor": {
+    "title": "Edit Card",
+    "save": "Save",
+    "exportPNG": "Export PNG",
+    "content": "Content",
+    "design": "Design",
+    "effects": "Effects",
+    "stats": "Stats",
+    "goals": "Goals",
+    "assists": "Assists",
+    "rating": "Rating",
+    "overall": "Overall",
+    "season": "Season",
+    "template": "Template",
+    "rarity": "Rarity",
+    "cardType": "Card Type",
+    "effectNone": "None",
+    "effectGoldFoil": "Gold Foil",
+    "effectHologram": "Hologram",
+    "effectNeon": "Neon",
+    "effectLed": "LED",
+    "effectFire": "Fire",
+    "saving": "Saving...",
+    "exporting": "Exporting...",
+    "unsavedChanges": "Unsaved changes",
+    "noTemplates": "No templates available",
+    "selectTemplate": "Select a template",
+    "exportSuccess": "PNG saved to gallery.",
+    "saveSuccess": "Card saved."
+  },
+  "studio": {
+    "title": "AI Studio",
+    "removeBackground": "Remove background",
+    "enhanceFace": "Enhance photo",
+    "actionPose": "Action pose",
+    "stadiumGenerator": "Stadium generator",
+    "cardStory": "Card story",
+    "styleTransfer": "Style transfer",
+    "styles": {
+      "fifa": "FIFA",
+      "panini": "Panini",
+      "comic": "Comic",
+      "anime": "Anime",
+      "cartoon": "Cartoon",
+      "fantasy": "Fantasy",
+      "superhero": "Superhero"
+    },
+    "processing": "Processing...",
+    "premiumRequired": "Premium account required"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "xp": "XP",
+    "level": "Level",
+    "unlocked": "Unlocked",
+    "locked": "Locked"
+  },
+  "print": {
+    "title": "Print",
+    "formats": {
+      "a4": "A4",
+      "a5": "A5",
+      "sticker9": "Sticker sheet (9 cards)",
+      "sticker12": "Sticker sheet (12 cards)",
+      "album": "Album PDF",
+      "teamPack": "Team pack"
+    },
+    "download": "Download PDF"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "subscription": "Subscription",
+    "notifications": "Notifications",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "subscription": {
+    "free": "Free",
+    "premium": "Premium",
+    "team": "Team",
+    "club": "Club",
+    "upgrade": "Upgrade",
+    "cardsPerMonth": "cards per month",
+    "unlimited": "Unlimited"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "notFound": "Page not found.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "uploadFailed": "Upload failed."
+  }
+}

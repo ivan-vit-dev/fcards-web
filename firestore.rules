@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin';
+    }
+
+    function isTeamCoach(teamId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/teams/$(teamId)).data.coachId == request.auth.uid;
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+
+    match /users/{uid} {
+      allow read:   if isUser(uid) || isSuperAdmin();
+      allow create: if isUser(uid);
+      allow update: if isUser(uid) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ─── Players ──────────────────────────────────────────────────────────────
+
+    match /users/{uid}/players/{playerId} {
+      allow read:   if isUser(uid) || resource.data.isPublic == true || isSuperAdmin();
+      allow create: if isUser(uid);
+      allow update: if isUser(uid);
+      allow delete: if isUser(uid);
+    }
+
+    // Collection group — allows public player search by slug across all users
+    match /{path=**}/players/{playerId} {
+      allow read: if resource.data.isPublic == true
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // ─── Teams ────────────────────────────────────────────────────────────────
+
+    match /teams/{teamId} {
+      allow read: if isSignedIn() && (
+        resource.data.coachId == request.auth.uid
+        || request.auth.uid in resource.data.memberIds
+      );
+      allow create: if isSignedIn() && request.resource.data.coachId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.coachId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.coachId == request.auth.uid;
+
+      match /members/{memberId} {
+        allow read:  if isSignedIn() && (memberId == request.auth.uid || isTeamCoach(teamId));
+        allow write: if isTeamCoach(teamId);
+      }
+    }
+
+    // ─── Matches ──────────────────────────────────────────────────────────────
+
+    match /matches/{matchId} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn() && isTeamCoach(request.resource.data.teamId);
+      allow update: if isSignedIn() && isTeamCoach(resource.data.teamId);
+      allow delete: if isSignedIn() && isTeamCoach(resource.data.teamId);
+
+      match /playerStats/{statId} {
+        allow read:   if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      }
+    }
+
+    // ─── Cards ────────────────────────────────────────────────────────────────
+
+    match /cards/{cardId} {
+      allow read: if resource.data.isPublic == true
+        || (isSignedIn() && resource.data.userId == request.auth.uid)
+        || isSuperAdmin();
+
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Owner gets full update; any signed-in user may increment shareCount on public cards
+      allow update: if (isSignedIn() && resource.data.userId == request.auth.uid)
+        || (isSignedIn() && resource.data.isPublic == true
+            && request.resource.data.diff(resource.data)
+                .affectedKeys().hasOnly(['shareCount', 'updatedAt'])
+            && request.resource.data.shareCount == resource.data.shareCount + 1);
+
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Templates ────────────────────────────────────────────────────────────
+
+    match /templates/{templateId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // ─── Achievements (global definitions) ────────────────────────────────────
+
+    match /achievements/{achievementId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // ─── User achievements (Cloud Functions admin SDK writes only) ────────────
+
+    match /userAchievements/{uid}/unlocked/{achievementId} {
+      allow read:  if isUser(uid) || isSuperAdmin();
+      allow write: if false;
+    }
+
+    // ─── Collections ──────────────────────────────────────────────────────────
+
+    match /collections/{collectionId} {
+      allow read:           if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create:         if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Clubs ────────────────────────────────────────────────────────────────
+
+    match /clubs/{clubId} {
+      allow read: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid
+        || request.auth.uid in resource.data.memberIds
+      );
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if isSuperAdmin();
+    }
+  }
+}

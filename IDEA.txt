@@ -1,0 +1,488 @@
+Fotbalové Kartičky (pracovní název: Football Cards Forge)
+Produktová specifikace (Full Version)
+
+1. Produktová vize
+Vytvořit největší platformu pro generování, sbírání, sdílení a tisk personalizovaných fotbalových kartiček pro děti, amatérské hráče, rodiče, trenéry a mládežnické kluby.
+Aplikace umožní hráčům vytvářet vlastní sběratelské kartičky podobné známým kolekcím, ale založené na jejich skutečných výkonech, statistikách, úspěších a fotkách.
+Cílem je propojit:
+fotbal
+sběratelství
+gamifikaci
+sociální sdílení
+AI generování obsahu
+
+2. Cílové skupiny
+Primární
+Děti 6–16 let
+Potřeby:
+mít vlastní kartičku
+chlubit se výkonem
+sbírat kolekci
+porovnávat se s kamarády
+
+Sekundární
+Rodiče
+Potřeby:
+uchovat vzpomínky
+vytisknout kartičky
+sdílet úspěchy dětí
+
+Trenéři
+Potřeby:
+motivovat hráče
+vytvářet týmové kolekce
+odměňovat výkony
+
+Kluby
+Potřeby:
+branding
+klubové kartičky
+prezentace hráčů
+
+3. Uživatelské role
+Guest
+Může:
+prohlížet veřejné karty
+prohlížet šablony
+vytvořit účet
+
+Player
+Může:
+vytvářet karty
+spravovat profil
+sbírat karty
+sdílet karty
+
+Parent
+Může:
+spravovat více dětí
+objednávat tisk
+schvalovat veřejné sdílení
+
+Coach
+Může:
+spravovat tým
+vytvářet hráče
+generovat týmové sady
+
+Club Admin
+Může:
+spravovat více týmů
+vytvářet sezóny
+klubové šablony
+
+Super Admin
+Správa platformy.
+
+4. Hlavní moduly
+Modul 1 — Uživatelské účty
+Registrace
+Google
+Apple
+Email + Heslo
+Profil
+jméno
+příjmení
+přezdívka
+věk
+ročník
+pozice
+oblíbený klub
+oblíbený hráč
+
+Modul 2 — Hráčský profil
+Profil obsahuje:
+Osobní informace
+fotografie
+číslo dresu
+pozice
+Statistiky
+zápasy
+góly
+asistence
+čistá konta
+MVP
+Trofeje
+achievementy
+medaile
+ocenění
+
+Modul 3 — Týmy
+Vytvoření týmu
+Pole:
+název
+logo
+sezóna
+věková kategorie
+
+Pozvánky
+email
+QR kód
+odkaz
+
+Soupiska
+Každý hráč:
+číslo dresu
+pozice
+fotografie
+
+Modul 4 — Zápasy
+Založení zápasu
+Pole:
+soupeř
+datum
+místo
+výsledek
+
+Statistiky hráčů
+Pro každého hráče:
+Útočníci
+góly
+asistence
+střely
+Záložníci
+přihrávky
+vytvořené šance
+Obránci
+odebrané míče
+bloky
+Brankáři
+zákroky
+čistá konta
+
+Modul 5 — Generátor kartiček
+Srdce celé aplikace.
+
+Typy kartiček
+Match Card
+Po zápase.
+
+MVP Card
+Nejlepší hráč.
+
+Season Card
+Sezónní souhrn.
+
+Achievement Card
+Milník.
+
+Team Card
+Týmová.
+
+Tournament Card
+Turnajová.
+
+Birthday Card
+Narozeninová.
+
+Farewell Card
+Ukončení sezóny.
+
+Champion Card
+Vítěz turnaje.
+
+Rookie Card
+První sezóna.
+
+Modul 6 — Editor kartiček
+Změna obsahu
+jméno
+text
+statistiky
+
+Design
+pozadí
+barvy
+rámečky
+
+Efekty
+zlatá fólie
+hologram
+neon
+led
+oheň
+
+Modul 7 — AI Studio
+Největší konkurenční výhoda.
+
+AI Remove Background
+Automaticky odstraní pozadí.
+
+AI Face Enhancement
+Vylepšení fotografie.
+
+AI Action Pose
+Z obyčejné fotky vytvoří akční fotbalovou pózu.
+
+AI Stadium Generator
+Generuje:
+stadion
+reflektory
+publikum
+
+AI Card Story
+Vygeneruje krátký popis výkonu.
+Například:
+Adam byl klíčovou součástí vítězství 5:2 a vstřelil rozhodující gól.
+
+AI Style Transfer
+Styly:
+FIFA
+Panini
+Comic
+Anime
+Cartoon
+Fantasy
+Superhero
+
+Modul 8 — Kolekce
+Každý hráč má vlastní album.
+
+Alba
+Sezóny
+2025
+2026
+2027
+
+Týmy
+Sparta U11
+Sparta U12
+Sparta U13
+
+Vyhledávání
+Filtrovat podle:
+sezóny
+typu
+rarity
+
+Modul 9 — Rarity System
+Common
+Šedá
+
+Uncommon
+Zelená
+
+Rare
+Modrá
+
+Epic
+Fialová
+
+Legendary
+Zlatá
+
+Mythic
+Holografická
+
+Limited Edition
+Limitovaný počet kusů.
+
+Modul 10 — Achievement System
+Příklady:
+Goal Machine
+100 gólů
+Iron Man
+50 zápasů
+Captain
+10 zápasů jako kapitán
+Playmaker
+50 asistencí
+Wall
+20 čistých kont
+
+Modul 11 — XP a Leveling
+Aktivity:
+vytvoření karty
+sdílení
+dokončení sezóny
+
+Levely:
+1–100
+
+Odemykají:
+rámečky
+efekty
+šablony
+
+Modul 12 — Sociální funkce
+Veřejný profil
+URL:
+/player/tomas-novak
+
+
+Veřejná karta
+URL:
+/card/abc123
+
+
+Sdílení
+Instagram
+Facebook
+WhatsApp
+Messenger
+TikTok
+
+QR kódy
+Každá karta má unikátní QR.
+
+Modul 13 — Tisk
+PDF Export
+A4
+A5
+
+Samolepky
+Arch:
+9 kartiček
+12 kartiček
+
+Album
+Automaticky vytvořené PDF album.
+
+Team Pack
+Kompletní sada hráčů.
+
+Modul 14 — Klubový režim
+Klub může:
+vytvořit více týmů
+vlastní branding
+vlastní šablony
+
+Modul 15 — Marketplace (budoucnost)
+Sdílení šablon.
+
+Tvůrci mohou prodávat:
+rámečky
+pozadí
+efekty
+
+Modul 16 — Administrace
+Správa:
+uživatelů
+týmů
+plateb
+šablon
+AI promptů
+moderace obsahu
+
+5. Datový model
+Users
+User
+
+id
+role
+email
+displayName
+photoURL
+
+Players
+Player
+
+id
+userId
+teamId
+position
+jerseyNumber
+
+Teams
+Team
+
+id
+name
+logo
+
+Matches
+Match
+
+id
+opponent
+date
+
+PlayerStats
+PlayerStats
+
+playerId
+goals
+assists
+rating
+
+Cards
+Card
+
+id
+playerId
+templateId
+rarity
+imageUrl
+
+Templates
+Template
+
+id
+name
+category
+config
+
+6. Technologie
+Frontend
+Next.js 16+
+React 19+
+TypeScript
+Tailwind CSS
+Shadcn UI
+Framer Motion
+
+Backend
+Firebase Auth
+Autentizace.
+Firestore
+Databáze.
+Firebase Storage
+Obrázky.
+Firebase Functions
+Generování.
+Firebase Remote Config
+Feature flags.
+Firebase Analytics
+Analytika.
+
+7. AI vrstva
+OpenAI
+Použití:
+generování textů
+generování stylů
+tvorba pozadí
+tvorba speciálních efektů
+
+8. Monetizace
+Free
+20 karet měsíčně
+základní šablony
+
+Premium
+neomezené karty
+AI styly
+HD export
+
+Team
+Pro trenéry.
+
+Club
+Pro celé kluby.
+
+9. Unikátní funkce, které by mohly aplikaci odlišit od konkurence
+Dynamic Match Hero Card
+Po každém zápase se automaticky vytvoří karta hráče zápasu.
+Career Timeline
+Kartičky tvoří historii celé kariéry dítěte.
+Digital Sticker Album
+Sbírání podobné Panini.
+Team Season Book
+Automaticky generovaná kronika sezóny.
+AI Commentary
+AI komentátor vytvoří krátký report zápasu.
+Hall of Fame
+Nejlepší karty sezóny.
+Club Legends
+Speciální kategorie pro bývalé hráče klubu.
+Tento koncept už není pouze „generátor kartiček“, ale plnohodnotná fotbalová sběratelská platforma, která může fungovat pro jednotlivce, týmy i celé mládežnické kluby.
+

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fotbalové Kartičky — Product Overview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #09090b;
+      --surface:  #18181b;
+      --surface2: #27272a;
+      --border:   #3f3f46;
+      --gold:     #d97706;
+      --gold-dim: #92400e;
+      --gold-fg:  #fbbf24;
+      --text:     #f4f4f5;
+      --muted:    #a1a1aa;
+      --radius:   10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    a { color: var(--gold-fg); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(160deg, #1c1008 0%, #09090b 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 72px 0 56px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--gold-dim); color: var(--gold-fg);
+      border: 1px solid var(--gold);
+      border-radius: 999px; padding: 3px 12px; font-size: 12px;
+      font-weight: 600; letter-spacing: .5px; margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 800; letter-spacing: -1px;
+      line-height: 1.1;
+    }
+    .hero-title span { color: var(--gold-fg); }
+    .hero-sub {
+      margin-top: 16px; font-size: 1.1rem; color: var(--muted);
+      max-width: 580px; margin-left: auto; margin-right: auto;
+    }
+    .hero-tags {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 8px; margin-top: 28px;
+    }
+    .tag {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 4px 12px;
+      font-size: 12px; color: var(--muted); font-weight: 500;
+    }
+
+    /* ── Sections ── */
+    section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+    section:last-of-type { border-bottom: none; }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 1.8rem; font-weight: 700; letter-spacing: -.5px;
+      margin-bottom: 6px;
+    }
+    .lead { color: var(--muted); margin-bottom: 32px; font-size: 1rem; }
+
+    /* ── About ── */
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    @media (max-width: 640px) { .about-grid { grid-template-columns: 1fr; } }
+    .about-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 24px;
+    }
+    .about-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: var(--gold-fg); }
+    .about-card p { font-size: .9rem; color: var(--muted); }
+
+    /* ── Roles ── */
+    .roles-table { width: 100%; border-collapse: collapse; }
+    .roles-table th, .roles-table td {
+      text-align: left; padding: 10px 16px;
+      border-bottom: 1px solid var(--surface2);
+    }
+    .roles-table thead th {
+      background: var(--surface2); color: var(--muted);
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .roles-table tbody tr:hover { background: var(--surface); }
+    .roles-table tbody td:first-child {
+      font-weight: 600; color: var(--gold-fg); white-space: nowrap;
+    }
+    .roles-table tbody td { font-size: .9rem; color: var(--text); }
+    .roles-table tbody td:last-child { color: var(--muted); font-size: .85rem; }
+
+    /* ── Features ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px 24px;
+      transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: var(--gold-dim); }
+    .feat-icon {
+      font-size: 1.6rem; margin-bottom: 10px; display: block;
+    }
+    .feature-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+    .feature-card p { font-size: .85rem; color: var(--muted); }
+
+    /* ── Tech Stack ── */
+    .stack-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 640px) { .stack-cols { grid-template-columns: 1fr; } }
+    .stack-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .stack-group-title {
+      background: var(--surface2); padding: 10px 16px;
+      font-size: 12px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .stack-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 16px; border-top: 1px solid var(--surface2);
+    }
+    .stack-row:first-of-type { border-top: none; }
+    .stack-layer { font-size: .8rem; color: var(--muted); }
+    .stack-tech { font-size: .85rem; font-weight: 600; color: var(--text); }
+
+    /* ── Architecture ── */
+    .arch-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .arch-list li {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+    }
+    .arch-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--gold); flex-shrink: 0; margin-top: 6px;
+    }
+    .arch-list strong { display: block; font-size: .9rem; margin-bottom: 3px; }
+    .arch-list span { font-size: .83rem; color: var(--muted); }
+
+    /* ── Status ── */
+    .status-bar {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 14px 0; text-align: center;
+      font-size: .82rem; color: var(--muted);
+    }
+    .status-bar strong { color: var(--gold-fg); }
+  </style>
+</head>
+<body>
+
+<!-- ──────────── HERO ──────────── -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-badge">⚽ Czech Football Platform</div>
+    <h1 class="hero-title">Fotbalové <span>Kartičky</span></h1>
+    <p class="hero-sub">
+      A personalized football trading card platform for Czech youth players, parents, coaches, and clubs —
+      combining real match stats, AI-powered styling, gamification, and physical print export.
+    </p>
+    <div class="hero-tags">
+      <span class="tag">Next.js 16</span>
+      <span class="tag">TypeScript 5</span>
+      <span class="tag">Firebase</span>
+      <span class="tag">Konva.js</span>
+      <span class="tag">OpenAI GPT-4o-mini</span>
+      <span class="tag">Tailwind v4</span>
+      <span class="tag">Czech &amp; English</span>
+      <span class="tag">PWA</span>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────── ABOUT ──────────── -->
+<section id="about">
+  <div class="container">
+    <div class="section-label">About</div>
+    <h2>What is this app?</h2>
+    <p class="lead">Fotbalové Kartičky (Football Cards Forge) lets young Czech football players create
+      collector cards from real match data, share them socially, and order professional prints.</p>
+
+    <div class="about-grid">
+      <div class="about-card">
+        <h3>Target audience</h3>
+        <p>Children aged 6–16, their parents and coaches, and Czech football clubs managing youth teams.
+           Content is Czech-first with full English translation.</p>
+      </div>
+      <div class="about-card">
+        <h3>Core concept</h3>
+        <p>Players earn real collector cards from actual match statistics. Better performance unlocks rarer
+           card types (Common → Rare → Epic → Legendary) with special visual effects.</p>
+      </div>
+      <div class="about-card">
+        <h3>Gamification</h3>
+        <p>Every action earns XP. Players level up (Začátečník → Legenda), unlock new card styles,
+           and earn achievement badges — keeping young players engaged all season.</p>
+      </div>
+      <div class="about-card">
+        <h3>Monetization</h3>
+        <p>Freemium model: Free (3 cards/month), Premium (149 CZK/mo), Team (399 CZK/mo),
+           Club (custom). Tier gating via Firebase Remote Config.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────── ROLES ──────────── -->
+<section id="roles">
+  <div class="container">
+    <div class="section-label">User Roles</div>
+    <h2>Who uses it</h2>
+    <p class="lead">Six distinct roles with progressive access levels.</p>
+
+    <table class="roles-table">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Key Capabilities</th>
+          <th>Access Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Guest</td>
+          <td>Browse public cards and player profiles, create an account</td>
+          <td>Public pages only</td>
+        </tr>
+        <tr>
+          <td>Player</td>
+          <td>Create cards from stats, manage profile, collect &amp; share, earn XP/achievements</td>
+          <td>Own data only</td>
+        </tr>
+        <tr>
+          <td>Parent</td>
+          <td>Manage child profiles, order prints, approve public sharing for minors</td>
+          <td>Child accounts</td>
+        </tr>
+        <tr>
+          <td>Coach</td>
+          <td>Manage teams, create player accounts, enter match stats, generate team card sets</td>
+          <td>Own teams</td>
+        </tr>
+        <tr>
+          <td>Club Admin</td>
+          <td>Manage multiple teams, create seasons, apply custom club branding/templates</td>
+          <td>Club scope</td>
+        </tr>
+        <tr>
+          <td>Super Admin</td>
+          <td>Full platform management: users, payments, moderation, AI prompt configuration</td>
+          <td>Full access</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ──────────── FEATURES ──────────── -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2>Main capabilities</h2>
+    <p class="lead">Sixteen implementation phases covering the full product surface.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feat-icon">👤</span>
+        <h3>Player Management</h3>
+        <p>Create player profiles with photos, positions, and biographical data. Photo upload to Firebase Storage with live preview.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🏆</span>
+        <h3>Team &amp; Match Tracking</h3>
+        <p>Organize players into teams, record match results, and enter per-player stats (goals, assists, rating, cards, minutes).</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🃏</span>
+        <h3>Card Generation</h3>
+        <p>Multi-step wizard: select player → pick template → configure stats → generate. Rarity auto-calculated from performance.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🎨</span>
+        <h3>Card Editor (Konva)</h3>
+        <p>Layered canvas editor (420×588px) with background, photo, stats, text, and visual effects. Exports at 3× resolution.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">✨</span>
+        <h3>Visual Effects</h3>
+        <p>Five Konva filter-based effects: Gold Foil, Hologram, Neon, LED, and Fire — applied per card rarity or manually.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🤖</span>
+        <h3>AI Studio</h3>
+        <p>Background removal and artistic style transfer via Replicate API. OpenAI GPT-4o-mini for card text generation. All via Cloud Functions — API keys never reach the client.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">📦</span>
+        <h3>Collection &amp; Albums</h3>
+        <p>Full collection view with filters (rarity, player, season), season album grouping, hologram CSS effects, and 3D card flip on hover.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🏅</span>
+        <h3>Achievements &amp; XP</h3>
+        <p>Event-driven achievement engine. XP earned for every action. Level progression from Začátečník to Legenda. Unlockable card styles per level.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">📤</span>
+        <h3>Social Sharing</h3>
+        <p>Native Web Share API with fallback to clipboard. Platform-specific links for Facebook, WhatsApp, Messenger, TikTok. QR code generator and download.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🖨️</span>
+        <h3>Print Center</h3>
+        <p>jsPDF export in four layouts: A4 (9-up), A4 (4-up large), Sticker sheet with cut marks, and A4 landscape Album. Tier-gated formats.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">💳</span>
+        <h3>Subscription Engine</h3>
+        <p>Four tiers (Free/Premium/Team/Club) with limits on cards/month, AI credits, print formats, players, and teams. All gating in one central module.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feat-icon">🔔</span>
+        <h3>PWA &amp; Push Notifications</h3>
+        <p>Installable PWA with offline caching via Service Worker. Firebase Cloud Messaging for background push notifications with permission request flow.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────── TECH STACK ──────────── -->
+<section id="stack">
+  <div class="container">
+    <div class="section-label">Tech Stack</div>
+    <h2>Technologies used</h2>
+    <p class="lead">Modern full-stack TypeScript with Firebase as the backend.</p>
+
+    <div class="stack-cols">
+      <div>
+        <div class="stack-group">
+          <div class="stack-group-title">Frontend</div>
+          <div class="stack-row"><span class="stack-layer">Framework</span><span class="stack-tech">Next.js 16 (App Router)</span></div>
+          <div class="stack-row"><span class="stack-layer">Language</span><span class="stack-tech">TypeScript 5 (strict)</span></div>
+          <div class="stack-row"><span class="stack-layer">UI Components</span><span class="stack-tech">shadcn/ui (base-nova)</span></div>
+          <div class="stack-row"><span class="stack-layer">Styling</span><span class="stack-tech">Tailwind CSS v4</span></div>
+          <div class="stack-row"><span class="stack-layer">State</span><span class="stack-tech">Zustand 5</span></div>
+          <div class="stack-row"><span class="stack-layer">Forms</span><span class="stack-tech">react-hook-form + zod</span></div>
+          <div class="stack-row"><span class="stack-layer">Animation</span><span class="stack-tech">Framer Motion</span></div>
+          <div class="stack-row"><span class="stack-layer">Canvas / Editor</span><span class="stack-tech">Konva + react-konva</span></div>
+          <div class="stack-row"><span class="stack-layer">PDF Export</span><span class="stack-tech">jsPDF v4</span></div>
+          <div class="stack-row"><span class="stack-layer">QR Codes</span><span class="stack-tech">qrcode.react</span></div>
+          <div class="stack-row"><span class="stack-layer">Icons</span><span class="stack-tech">lucide-react</span></div>
+          <div class="stack-row"><span class="stack-layer">Toasts</span><span class="stack-tech">react-hot-toast</span></div>
+          <div class="stack-row"><span class="stack-layer">Theming</span><span class="stack-tech">next-themes (class-based dark)</span></div>
+          <div class="stack-row"><span class="stack-layer">i18n</span><span class="stack-tech">next-intl 4 (cs + en)</span></div>
+          <div class="stack-row"><span class="stack-layer">Dates</span><span class="stack-tech">date-fns</span></div>
+          <div class="stack-row"><span class="stack-layer">Fonts</span><span class="stack-tech">Inter + Oswald (Google)</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="stack-group">
+          <div class="stack-group-title">Backend &amp; Infrastructure</div>
+          <div class="stack-row"><span class="stack-layer">Auth</span><span class="stack-tech">Firebase Auth</span></div>
+          <div class="stack-row"><span class="stack-layer">Database</span><span class="stack-tech">Cloud Firestore</span></div>
+          <div class="stack-row"><span class="stack-layer">Storage</span><span class="stack-tech">Firebase Storage</span></div>
+          <div class="stack-row"><span class="stack-layer">Functions</span><span class="stack-tech">Firebase Cloud Functions v2</span></div>
+          <div class="stack-row"><span class="stack-layer">Push Notifications</span><span class="stack-tech">Firebase Cloud Messaging</span></div>
+          <div class="stack-row"><span class="stack-layer">Analytics</span><span class="stack-tech">Firebase Analytics</span></div>
+          <div class="stack-row"><span class="stack-layer">AI Text</span><span class="stack-tech">OpenAI GPT-4o-mini (CF only)</span></div>
+          <div class="stack-row"><span class="stack-layer">AI Images</span><span class="stack-tech">Replicate API (CF only)</span></div>
+          <div class="stack-row"><span class="stack-layer">Feature Flags</span><span class="stack-tech">Firebase Remote Config</span></div>
+          <div class="stack-row"><span class="stack-layer">Security Rules</span><span class="stack-tech">Firestore + Storage Rules</span></div>
+          <div class="stack-row"><span class="stack-layer">PWA</span><span class="stack-tech">Service Worker + manifest.json</span></div>
+        </div>
+        <br>
+        <div class="stack-group">
+          <div class="stack-group-title">Color System</div>
+          <div class="stack-row"><span class="stack-layer">Color space</span><span class="stack-tech">oklch() everywhere</span></div>
+          <div class="stack-row"><span class="stack-layer">Gold palette</span><span class="stack-tech">Hue 75 (amber gold)</span></div>
+          <div class="stack-row"><span class="stack-layer">Dark mode</span><span class="stack-tech">.dark class on &lt;html&gt;</span></div>
+          <div class="stack-row"><span class="stack-layer">Opacity</span><span class="stack-tech">color-mix(in oklch, …)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────── ARCHITECTURE ──────────── -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2>Key decisions</h2>
+    <p class="lead">Constraints and patterns that shape all development decisions.</p>
+
+    <ul class="arch-list">
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>Client-side auth only — no Admin SDK, no session cookies</strong>
+          <span>AuthProvider listens to onAuthStateChanged → writes to Zustand. Route guards live in AppShell (client component), not Next.js middleware. Fix for race conditions: setUser() before router.push() on registration.</span>
+        </div>
+      </li>
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>Single Firestore access point</strong>
+          <span>All reads and writes go through <code>src/lib/firebaseServices.ts</code>. Components and stores never import <code>db</code> directly. Every document has createdAt, updatedAt (Timestamp) and userId/ownerId.</span>
+        </div>
+      </li>
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>API keys server-side only</strong>
+          <span>OPENAI_API_KEY and REPLICATE_API_KEY are Cloud Functions environment variables only — never in .env.local or any client bundle. All AI calls go through Cloud Function HTTP endpoints.</span>
+        </div>
+      </li>
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>One real-time listener — AI status only</strong>
+          <span>While a card's aiStatus is "pending" or "processing", the card detail page opens an onSnapshot on cards/{cardId}. The listener is closed when aiStatus becomes "done" or "error".</span>
+        </div>
+      </li>
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>Konva Stage initialized once</strong>
+          <span>The card editor's Konva Stage is created in a useEffect via useRef and never recreated on re-render. Card dimensions are fixed at 420×588px (2.5:3.5 ratio). Export at pixelRatio 3 for print quality.</span>
+        </div>
+      </li>
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>Subscription gating centralized</strong>
+          <span>All tier limit logic lives in <code>src/lib/subscriptionEngine.ts</code>. Components call gate functions (canGenerateCard, canUseAI, canPrint) and show UpgradeDialog on failure. Never hardcode tier limits in components.</span>
+        </div>
+      </li>
+      <li>
+        <div class="arch-dot"></div>
+        <div>
+          <strong>i18n: proxy.ts not middleware.ts</strong>
+          <span>next-intl requires the middleware file to be named <code>src/proxy.ts</code>. All app routes live under <code>src/app/[locale]/</code>. User-facing strings always via useTranslations() — never hardcoded.</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ──────────── STATUS BAR ──────────── -->
+<div class="status-bar">
+  <div class="container">
+    <strong>Fotbalové Kartičky</strong> &nbsp;·&nbsp;
+    Next.js 16 · Firebase · TypeScript 5 &nbsp;·&nbsp;
+    16 implementation phases complete &nbsp;·&nbsp;
+    Czech primary · English secondary
+  </div>
+</div>
+
+</body>
+</html>

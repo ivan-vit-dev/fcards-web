@@ -1,0 +1,76 @@
+{
+  "name": "Fotbalové Kartičky",
+  "short_name": "FKartičky",
+  "description": "Personalizované fotbalové kartičky pro hráče, týmy a kluby.",
+  "start_url": "/cs",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#854d0e",
+  "background_color": "#09090b",
+  "lang": "cs",
+  "categories": ["sports", "games", "kids"],
+  "icons": [
+    {
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Přehled aplikace"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nová kartička",
+      "short_name": "Nová",
+      "description": "Vytvořit novou kartičku",
+      "url": "/cs/cards/new",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Moje kartičky",
+      "short_name": "Kartičky",
+      "description": "Zobrazit kolekci karet",
+      "url": "/cs/cards",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ]
+}
