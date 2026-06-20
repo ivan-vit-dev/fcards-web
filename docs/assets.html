@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fotbalové Kartičky — Visual Assets Brief</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #09090b;
+      --surface:   #18181b;
+      --surface2:  #27272a;
+      --border:    #3f3f46;
+      --gold:      #d97706;
+      --gold-dim:  #92400e;
+      --gold-fg:   #fbbf24;
+      --text:      #f4f4f5;
+      --muted:     #a1a1aa;
+      --dim:       #71717a;
+      --green:     #4ade80;
+      --blue:      #60a5fa;
+      --orange:    #fb923c;
+      --red:       #f87171;
+      --purple:    #c084fc;
+      --sidebar-w: 240px;
+      --radius:    10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed; top: 0; left: 0;
+      height: 100vh; overflow-y: auto;
+      padding: 0 0 32px;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .sidebar-logo {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo strong { color: var(--gold-fg); font-size: .9rem; display: block; }
+    .sidebar-logo small { color: var(--dim); font-size: .7rem; }
+    .nav-group { padding: 12px 0 4px; }
+    .nav-group-label {
+      padding: 0 16px 5px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim);
+    }
+    .nav-link {
+      display: block; padding: 5px 16px;
+      font-size: .8rem; color: var(--muted);
+      text-decoration: none; transition: color .15s, background .15s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .nav-link.active { color: var(--gold-fg); background: color-mix(in srgb, #d97706 12%, transparent); }
+
+    /* ── Main ── */
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 0 0 80px; }
+
+    /* ── Page header ── */
+    .page-header {
+      background: linear-gradient(160deg, #1c1008 0%, #09090b 80%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 48px 32px;
+    }
+    .page-header .label {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+    }
+    .page-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.5px; }
+    .page-header p { color: var(--muted); margin-top: 8px; max-width: 620px; font-size: .9rem; }
+
+    /* ── Section ── */
+    .section { padding: 36px 48px; border-bottom: 1px solid var(--border); }
+    .section:last-of-type { border-bottom: none; }
+    .section > h2 {
+      font-size: 1.25rem; font-weight: 700; letter-spacing: -.3px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .section > .desc { color: var(--muted); font-size: .85rem; margin-bottom: 20px; margin-top: 6px; }
+
+    h3 { font-size: .95rem; font-weight: 700; color: var(--gold-fg); margin: 22px 0 8px; }
+    h3:first-child { margin-top: 0; }
+    p { font-size: .85rem; color: var(--muted); margin: 5px 0; }
+
+    /* ── Priority badges ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 700; letter-spacing: .5px;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    .p1 { background: color-mix(in srgb, #f87171 15%, transparent); color: #f87171; border: 1px solid #f87171; }
+    .p2 { background: color-mix(in srgb, #fb923c 15%, transparent); color: #fb923c; border: 1px solid #fb923c; }
+    .p3 { background: color-mix(in srgb, #fbbf24 15%, transparent); color: #fbbf24; border: 1px solid #fbbf24; }
+    .p4 { background: color-mix(in srgb, #71717a 15%, transparent); color: #a1a1aa; border: 1px solid #71717a; }
+
+    /* ── Asset cards ── */
+    .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin: 14px 0; }
+    .asset-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .asset-card-preview {
+      height: 100px;
+      display: flex; align-items: center; justify-content: center;
+      border-bottom: 1px solid var(--border);
+      font-size: 2rem;
+      position: relative; overflow: hidden;
+    }
+    .asset-card-body { padding: 12px 14px; }
+    .asset-card-name { font-weight: 700; font-size: .88rem; margin-bottom: 2px; }
+    .asset-card-file { font-family: monospace; font-size: .75rem; color: var(--gold-fg); margin-bottom: 6px; }
+    .asset-card-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 6px; }
+    .spec { background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-size: 11px; color: var(--muted); font-family: monospace; }
+
+    /* ── Preview swatches ── */
+    .gold-preview { background: linear-gradient(135deg, #854d0e 0%, #d97706 50%, #fbbf24 100%); }
+    .dark-preview { background: #09090b; }
+    .card-preview {
+      background: linear-gradient(160deg, #1c1008 0%, #27140a 100%);
+      border: 1px solid #3f3f46;
+    }
+    .icon-preview { background: var(--surface2); }
+    .hero-preview { background: linear-gradient(135deg, #09090b 0%, #1c1008 40%, #0f0a00 100%); }
+    .empty-preview { background: var(--surface2); }
+    .og-preview { background: linear-gradient(135deg, #09090b, #1a0f03); }
+
+    /* ── Color chips ── */
+    .color-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .color-chip {
+      border-radius: 8px; padding: 10px 14px;
+      font-size: .75rem; font-weight: 600; font-family: monospace;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--surface2); font-size: .83rem; vertical-align: top; }
+    thead th { background: var(--surface2); color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    tbody tr:hover { background: var(--surface); }
+    td:first-child { white-space: nowrap; }
+    code { font-family: monospace; font-size: .77rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--gold-fg); }
+
+    /* ── Lists ── */
+    ul, ol { padding-left: 18px; color: var(--muted); font-size: .85rem; }
+    li { margin: 4px 0; }
+    li strong { color: var(--text); }
+
+    /* ── Highlight box ── */
+    .note {
+      background: color-mix(in srgb, #d97706 8%, transparent);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: .83rem;
+      color: var(--muted);
+      margin: 12px 0;
+    }
+    .note strong { color: var(--gold-fg); }
+
+    /* ── Two col ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+    /* ── Canvas mock ── */
+    .canvas-mock {
+      width: 90px; height: 126px;
+      border-radius: 8px;
+      background: linear-gradient(160deg, #1c1008, #3d1f00);
+      border: 2px solid #d97706;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      padding: 6px; gap: 3px;
+      box-shadow: 0 0 20px rgba(217,119,6,.35);
+    }
+    .canvas-bar { height: 6px; border-radius: 3px; width: 100%; background: rgba(217,119,6,.5); }
+    .canvas-bar.gold { background: #d97706; width: 70%; }
+
+    /* ── Scroll active ── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .section, .page-header { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <strong>Fotbalové Kartičky</strong>
+    <small>Visual Assets Brief</small>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Brand</div>
+    <a class="nav-link" href="#brand">Logo &amp; Identity</a>
+    <a class="nav-link" href="#colors">Color Palette</a>
+    <a class="nav-link" href="#typography">Typography Spec</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">System Icons</div>
+    <a class="nav-link" href="#favicon">Favicon Pack</a>
+    <a class="nav-link" href="#pwa">PWA Icons</a>
+    <a class="nav-link" href="#apple">Apple / Windows</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">UI Assets</div>
+    <a class="nav-link" href="#empty-states">Empty State Illustrations</a>
+    <a class="nav-link" href="#placeholders">Placeholders</a>
+    <a class="nav-link" href="#achievements">Achievement Icons</a>
+    <a class="nav-link" href="#templates">Card Template Previews</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Marketing</div>
+    <a class="nav-link" href="#landing">Landing Page Images</a>
+    <a class="nav-link" href="#og">Social / OG Images</a>
+    <a class="nav-link" href="#screenshots">PWA Screenshots</a>
+    <a class="nav-link" href="#subscription">Subscription Tier Art</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Reference</div>
+    <a class="nav-link" href="#checklist">Master Checklist</a>
+    <a class="nav-link" href="#export">Export Guidelines</a>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<div class="page-header">
+  <div class="label">Design Brief</div>
+  <h1>Visual Assets Specification</h1>
+  <p>Complete reference for every image, icon, illustration, and background asset needed for Fotbalové Kartičky — with exact dimensions, color specs, file formats, and priority ratings.</p>
+  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+    <span class="badge p1">🔴 P1 — Launch blocker</span>
+    <span class="badge p2">🟠 P2 — Required before users see it</span>
+    <span class="badge p3">🟡 P3 — Nice to have at launch</span>
+    <span class="badge p4">⚪ P4 — Post-launch polish</span>
+  </div>
+</div>
+
+<!-- ══════════════ BRAND ══════════════ -->
+<div class="section" id="brand">
+  <h2>Logo &amp; Brand Identity</h2>
+  <p class="desc">The full logo system. All versions should come from a single master Figma/Illustrator source. Export SVG + PNG from the same file to guarantee pixel-accuracy across sizes.</p>
+
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-card-preview dark-preview" style="gap:8px;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#854d0e,#d97706);display:flex;align-items:center;justify-content:center;font-size:18px">⚽</div>
+          <div>
+            <div style="font-weight:800;font-size:13px;color:#fbbf24;line-height:1.1">Fotbalové</div>
+            <div style="font-weight:800;font-size:13px;color:#f4f4f5;line-height:1.1">Kartičky</div>
+          </div>
+        </div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Logo — Horizontal</div>
+        <div class="asset-card-file">logo-horizontal.svg / .png</div>
+        <p>Icon + two-line wordmark. Primary lockup for sidebar, header, emails.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG primary</span>
+          <span class="spec">PNG @1x @2x @3x</span>
+          <span class="badge p1">P1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview dark-preview" style="flex-direction:column;gap:6px">
+        <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#854d0e,#d97706);display:flex;align-items:center;justify-content:center;font-size:24px">⚽</div>
+        <div style="font-weight:800;font-size:11px;color:#fbbf24;text-align:center;line-height:1.2">Fotbalové<br>Kartičky</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Logo — Stacked</div>
+        <div class="asset-card-file">logo-stacked.svg / .png</div>
+        <p>Icon above two-line wordmark. Used in PWA splash screens and square contexts.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG primary</span>
+          <span class="spec">512×512 canvas</span>
+          <span class="badge p2">P2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview dark-preview">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#854d0e,#d97706);display:flex;align-items:center;justify-content:center;font-size:32px">⚽</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">App Icon / Mark</div>
+        <div class="asset-card-file">logo-mark.svg / .png</div>
+        <p>Just the icon symbol — no text. Used in favicons, PWA icons, notification badges. Should be legible at 16px.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG primary</span>
+          <span class="spec">Legible @ 16px</span>
+          <span class="badge p1">P1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview" style="background:#f8f5ee">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#854d0e,#d97706);display:flex;align-items:center;justify-content:center;font-size:16px">⚽</div>
+          <div style="font-weight:800;font-size:12px;color:#1c1008;line-height:1.1">Fotbalové<br>Kartičky</div>
+        </div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Logo — Light Background</div>
+        <div class="asset-card-file">logo-light.svg / .png</div>
+        <p>Light-mode safe version for print, emails, white backgrounds. Wordmark in near-black <code>#1c0f04</code>.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG primary</span>
+          <span class="badge p3">P3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview" style="background:#09090b">
+        <div style="font-weight:900;font-size:22px;background:linear-gradient(135deg,#854d0e,#d97706,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FK</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Monogram</div>
+        <div class="asset-card-file">logo-monogram.svg</div>
+        <p>"FK" lettermark. For watermarks, embossing, very small contexts where the full mark doesn't fit.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG only</span>
+          <span class="badge p4">P4</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview" style="background:white">
+        <div style="width:64px;height:64px;background:#09090b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px">⚽</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Logo — Monochrome / Single Color</div>
+        <div class="asset-card-file">logo-mono-white.svg / logo-mono-black.svg</div>
+        <p>Solid white and solid black versions for contexts where color is not possible (embroidery, stamps, print ink limits).</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG only</span>
+          <span class="badge p4">P4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Logo concept direction:</strong> The mark should feel like a premium trading card — a football with a subtle star or trophy element, rendered in the gold gradient. Avoid photographic football imagery. Flat, bold, geometric. Think Panini + UEFA branding energy. The wordmark should use <strong>Oswald Bold</strong> to match the in-app display font.
+  </div>
+</div>
+
+<!-- ══════════════ COLORS ══════════════ -->
+<div class="section" id="colors">
+  <h2>Definitive Color Palette</h2>
+  <p class="desc">All assets must use these values. The primary palette is dark-on-dark with amber gold accent. Never use the purple/violet hue (hue 285) — that belongs to the sibling flive-web project.</p>
+
+  <h3>Brand Gold (Primary)</h3>
+  <div class="color-row">
+    <div class="color-chip" style="background:#fbbf24;color:#1c0f04">Gold 400<br>#fbbf24</div>
+    <div class="color-chip" style="background:#d97706;color:#fff8e6">Gold 600<br>#d97706</div>
+    <div class="color-chip" style="background:#b45309;color:#fff8e6">Gold 700<br>#b45309</div>
+    <div class="color-chip" style="background:#854d0e;color:#fef3c7">Gold 800<br>#854d0e</div>
+    <div class="color-chip" style="background:#92400e;color:#fef3c7">Gold 800d<br>#92400e</div>
+    <div class="color-chip" style="background:#78350f;color:#fde68a">Gold 900<br>#78350f</div>
+  </div>
+
+  <h3>App Backgrounds</h3>
+  <div class="color-row">
+    <div class="color-chip" style="background:#09090b;color:#71717a;border-color:#27272a">BG Dark<br>#09090b</div>
+    <div class="color-chip" style="background:#18181b;color:#a1a1aa;border-color:#27272a">Surface<br>#18181b</div>
+    <div class="color-chip" style="background:#27272a;color:#a1a1aa">Surface 2<br>#27272a</div>
+    <div class="color-chip" style="background:#3f3f46;color:#d4d4d8">Border<br>#3f3f46</div>
+    <div class="color-chip" style="background:#f8f5ee;color:#1c0f04">BG Light<br>#f8f5ee</div>
+  </div>
+
+  <h3>Rarity Colors (for card borders, glows, badges)</h3>
+  <div class="color-row">
+    <div class="color-chip" style="background:#888;color:#fff">Common<br>#888888</div>
+    <div class="color-chip" style="background:#22c55e;color:#fff">Uncommon<br>#22c55e</div>
+    <div class="color-chip" style="background:#4f8ef7;color:#fff">Rare<br>#4f8ef7</div>
+    <div class="color-chip" style="background:#b06cf8;color:#fff">Epic<br>#b06cf8</div>
+    <div class="color-chip" style="background:#c9a227;color:#1c0f04">Legendary<br>#c9a227</div>
+    <div class="color-chip" style="background:linear-gradient(135deg,#4f8ef7,#b06cf8,#c9a227,#22c55e);color:#fff">Mythic<br>animated</div>
+    <div class="color-chip" style="background:#ef4444;color:#fff">Limited<br>#ef4444</div>
+  </div>
+
+  <h3>Brand Gradient</h3>
+  <div style="height:48px;border-radius:10px;background:linear-gradient(135deg,#854d0e 0%,#d97706 50%,#fbbf24 100%);margin:10px 0"></div>
+  <p><code>135deg, #854d0e → #d97706 → #fbbf24</code> — used for CTAs, hero elements, the logo mark. Burnt orange accent: <code>#b45309</code> (hue 55).</p>
+</div>
+
+<!-- ══════════════ TYPOGRAPHY ══════════════ -->
+<div class="section" id="typography">
+  <h2>Typography Reference</h2>
+  <p class="desc">For any asset that includes text. Match the in-app fonts exactly.</p>
+  <table>
+    <thead><tr><th>Role</th><th>Font</th><th>Weight</th><th>Use in assets</th></tr></thead>
+    <tbody>
+      <tr><td>Logo wordmark</td><td>Oswald</td><td>700 Bold</td><td>Logo, card headings, player names on cards</td></tr>
+      <tr><td>Body / UI text</td><td>Inter</td><td>400–600</td><td>Descriptions, labels in marketing images</td></tr>
+      <tr><td>Stat numbers</td><td>Oswald</td><td>700 Bold</td><td>Numbers on card template previews</td></tr>
+      <tr><td>Badges / tags</td><td>Inter</td><td>700 (uppercase)</td><td>Rarity badges, tier labels</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:10px">Both fonts are free on Google Fonts. Download for local use: <strong>Oswald</strong> (Bold 700) and <strong>Inter</strong> (Regular 400, SemiBold 600).</p>
+</div>
+
+<!-- ══════════════ FAVICON ══════════════ -->
+<div class="section" id="favicon">
+  <h2>Favicon Pack</h2>
+  <p class="desc">All favicon files go into <code>public/</code> (root level). The Next.js metadata object in <code>src/app/[locale]/layout.tsx</code> already references these paths.</p>
+
+  <table>
+    <thead><tr><th>File</th><th>Size</th><th>Format</th><th>Purpose</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td><code>public/favicon.ico</code></td><td>16×16 + 32×32</td><td>ICO (multi-size)</td><td>All browsers fallback, browser tab</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/favicon-16x16.png</code></td><td>16×16</td><td>PNG</td><td>Small browser tab</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/favicon-32x32.png</code></td><td>32×32</td><td>PNG</td><td>Standard browser tab, bookmarks</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/favicon.svg</code></td><td>Scalable</td><td>SVG</td><td>Modern browsers — crisp at any size</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/apple-touch-icon.png</code></td><td>180×180</td><td>PNG</td><td>iOS "Add to Home Screen", iPad</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/safari-pinned-tab.svg</code></td><td>Scalable</td><td>SVG monochrome</td><td>Safari pinned tab — must be pure black paths on transparent</td><td><span class="badge p2">P2</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>favicon.svg tip:</strong> Use a <code>&lt;svg&gt;</code> with a <code>&lt;style&gt;</code> block for dark/light mode adaptation:
+    <code>@media (prefers-color-scheme: dark) { .icon { fill: #fbbf24; } }</code>
+    This makes the favicon gold on dark OS themes and darker on light themes.
+  </div>
+
+  <h3>Recommended approach</h3>
+  <p>Generate the entire favicon pack from a single 512×512 master SVG using <strong>RealFaviconGenerator.net</strong> or <strong>Favicon.io</strong>. Upload the logo mark (not the full horizontal logo — icon only).</p>
+</div>
+
+<!-- ══════════════ PWA ICONS ══════════════ -->
+<div class="section" id="pwa">
+  <h2>PWA Icons</h2>
+  <p class="desc">Required by <code>public/manifest.json</code>. All go in <code>public/icons/</code>. The manifest already references all these paths — the files just need to exist.</p>
+
+  <table>
+    <thead><tr><th>File</th><th>Size</th><th>Purpose</th><th>Maskable?</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td><code>public/icons/icon-72.png</code></td><td>72×72</td><td>Small Android home screen</td><td>No</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/icons/icon-96.png</code></td><td>96×96</td><td>Android notification, PWA shortcuts</td><td>No</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/icons/icon-128.png</code></td><td>128×128</td><td>Chrome Web Store, Chromebook</td><td>No</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/icons/icon-192.png</code></td><td>192×192</td><td>Android "Add to Home Screen" prompt — critical</td><td><strong>Yes</strong></td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/icons/icon-384.png</code></td><td>384×384</td><td>High-res Android</td><td>No</td><td><span class="badge p2">P2</span></td></tr>
+      <tr><td><code>public/icons/icon-512.png</code></td><td>512×512</td><td>Android splash screen, Play Store — critical</td><td><strong>Yes</strong></td><td><span class="badge p1">P1</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="two-col" style="margin-top:14px">
+    <div>
+      <h3>Maskable icon safe zone</h3>
+      <p>For icon-192.png and icon-512.png (marked <code>purpose: "any maskable"</code>), the visible logo must fit within the center <strong>80%</strong> of the canvas. Android clips icons into circles, squircles, or other shapes — anything outside the safe zone gets cut.</p>
+      <div style="margin:12px 0;width:100px;height:100px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative">
+        <div style="position:absolute;inset:10%;border:2px dashed var(--gold-dim);border-radius:8px"></div>
+        <div style="width:50px;height:50px;border-radius:10px;background:linear-gradient(135deg,#854d0e,#d97706);display:flex;align-items:center;justify-content:center;font-size:24px">⚽</div>
+      </div>
+      <p>Gold background fills the full canvas. Icon stays within the dashed safe zone (80% center).</p>
+    </div>
+    <div>
+      <h3>Recommended canvas spec</h3>
+      <ul>
+        <li><strong>Background color:</strong> <code>#854d0e</code> (Gold 800 — matches PWA theme_color)</li>
+        <li><strong>Safe zone:</strong> Center 80% — icon mark only, no text</li>
+        <li><strong>Icon color:</strong> White or <code>#fbbf24</code> on gold bg</li>
+        <li><strong>Border-radius on canvas:</strong> 0px — OS applies its own clipping</li>
+        <li><strong>Format:</strong> PNG-24 with no transparency for maskable</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ APPLE / WINDOWS ══════════════ -->
+<div class="section" id="apple">
+  <h2>Apple &amp; Windows Platform Icons</h2>
+  <p class="desc">Platform-specific touch icons and tiles beyond the standard PWA set.</p>
+
+  <table>
+    <thead><tr><th>File</th><th>Size</th><th>Platform</th><th>Notes</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td><code>public/apple-touch-icon.png</code></td><td>180×180</td><td>iOS / iPadOS</td><td>No transparency. Background should be <code>#09090b</code> dark or gold. Rounded corners applied automatically by iOS.</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/apple-touch-icon-precomposed.png</code></td><td>180×180</td><td>Older iOS</td><td>Same as above — iOS won't add gloss effect.</td><td><span class="badge p3">P3</span></td></tr>
+      <tr><td><code>public/icons/icon-192.png</code> (reused)</td><td>192×192</td><td>Android</td><td>Same file as PWA icon — already covered.</td><td><span class="badge p1">P1</span></td></tr>
+      <tr><td><code>public/mstile-150x150.png</code></td><td>150×150</td><td>Windows 10 Start</td><td>Logo mark on gold or dark background. Add <code>&lt;meta name="msapplication-TileColor" content="#854d0e"&gt;</code> to layout.</td><td><span class="badge p3">P3</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════ EMPTY STATES ══════════════ -->
+<div class="section" id="empty-states">
+  <h2>Empty State Illustrations</h2>
+  <p class="desc">Shown when a user has no content yet. SVG illustrations — not photos or clipart. Style: minimal, geometric, football-themed. Uses the app's dark gold palette. Approx 280×200px display size.</p>
+
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">🧑‍🤝‍🧑</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">No Players</div>
+        <div class="asset-card-file">public/illustrations/empty-players.svg</div>
+        <p>Shown on <code>/players</code> when no players created. Silhouettes of two players with a "+" hint.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p2">P2</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">🏆</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">No Teams</div>
+        <div class="asset-card-file">public/illustrations/empty-teams.svg</div>
+        <p>Shown on <code>/teams</code> when user has no teams. Minimalist shield/crest outline.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p2">P2</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">🃏</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">No Cards</div>
+        <div class="asset-card-file">public/illustrations/empty-cards.svg</div>
+        <p>Shown on <code>/cards</code>. A few overlapping empty card frames with gold border glow and a "Generate your first card" vibe.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p1">P1</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">⚽</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">No Matches</div>
+        <div class="asset-card-file">public/illustrations/empty-matches.svg</div>
+        <p>Shown on <code>/matches</code>. A football on a field line. "Record your first match" tone.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p2">P2</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">🏅</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">No Achievements</div>
+        <div class="asset-card-file">public/illustrations/empty-achievements.svg</div>
+        <p>Shown on <code>/achievements</code> if locked. Dimmed trophy / badge cluster.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p3">P3</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">✨</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">AI Processing</div>
+        <div class="asset-card-file">public/illustrations/ai-generating.svg</div>
+        <p>Shown on card detail while <code>aiStatus === "pending" | "processing"</code>. Animated SVG — swirling stars/sparkles around a card outline. Looping.</p>
+        <div class="asset-card-meta"><span class="spec">Animated SVG</span><span class="spec">240×240</span><span class="badge p2">P2</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">📴</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Offline Page</div>
+        <div class="asset-card-file">public/illustrations/offline.svg</div>
+        <p>Used on <code>/offline</code> page (cached by service worker). A disconnected plug or signal icon. Warm dark tones.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p2">P2</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview empty-preview">❌</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Error State</div>
+        <div class="asset-card-file">public/illustrations/error.svg</div>
+        <p>Used in error boundary pages (<code>error.tsx</code>, <code>global-error.tsx</code>). Broken card or warning triangle. Not alarming — friendly.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">280×200</span><span class="badge p2">P2</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Illustration style guide:</strong> Minimal geometric shapes. Max 4–5 colors per illustration (use the app palette above). No gradients inside SVG paths — solid fills only for CSS adaptability. All illustrations should work on both dark and light backgrounds — use <code>currentColor</code> for stroke and icon paths.
+  </div>
+</div>
+
+<!-- ══════════════ PLACEHOLDERS ══════════════ -->
+<div class="section" id="placeholders">
+  <h2>Content Placeholders</h2>
+  <p class="desc">Shown when a user or entity has no photo/logo yet. Should be tasteful, on-brand, and not look like a broken image.</p>
+
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-card-preview icon-preview">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#27272a,#3f3f46);border:2px solid #71717a;display:flex;align-items:center;justify-content:center;font-size:32px">👤</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Player Photo Placeholder</div>
+        <div class="asset-card-file">public/placeholders/player-avatar.svg</div>
+        <p>Default when player has no <code>photoURL</code>. Silhouette of a player (no face). Works as both circular avatar and the card photo slot (portrait orientation).</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG</span><span class="spec">Square + Portrait variants</span>
+          <span class="badge p1">P1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview icon-preview">
+        <div style="width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#27272a,#3f3f46);border:2px solid #71717a;display:flex;align-items:center;justify-content:center;font-size:32px">🛡️</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Team Logo Placeholder</div>
+        <div class="asset-card-file">public/placeholders/team-logo.svg</div>
+        <p>Generic shield/crest shape for teams with no <code>logoURL</code>. Should not look like any real club's crest.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG</span><span class="spec">Square</span>
+          <span class="badge p1">P1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview icon-preview">
+        <div style="width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#27272a,#3f3f46);border:2px solid #71717a;display:flex;align-items:center;justify-content:center;font-size:32px">🏢</div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Club Logo Placeholder</div>
+        <div class="asset-card-file">public/placeholders/club-logo.svg</div>
+        <p>Default for clubs with no uploaded logo. Used in <code>ClubBrandingEditor</code> and the branding preview.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG</span><span class="spec">Square</span>
+          <span class="badge p2">P2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview card-preview">
+        <div class="canvas-mock">
+          <div class="canvas-bar"></div>
+          <div class="canvas-bar gold"></div>
+          <div class="canvas-bar" style="width:50%"></div>
+        </div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Card Image Placeholder</div>
+        <div class="asset-card-file">public/placeholders/card-image.svg</div>
+        <p>Shown in <code>CardPreview</code> when <code>card.imageUrl</code> is empty (pending generation). Maintains the 420×588 aspect ratio. Subtle card-shaped frame with animated shimmer.</p>
+        <div class="asset-card-meta">
+          <span class="spec">SVG</span><span class="spec">3:4.2 ratio</span>
+          <span class="badge p1">P1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ACHIEVEMENTS ══════════════ -->
+<div class="section" id="achievements">
+  <h2>Achievement Icons</h2>
+  <p class="desc">One icon per achievement definition. Used in <code>AchievementCard</code> component — 48×48 display size. The <code>Achievement.iconName</code> field in Firestore references the filename. Format: SVG (preferred) or PNG at @2x (96×96).</p>
+
+  <div class="note">
+    <strong>Current implementation:</strong> The <code>AchievementCard</code> component uses <code>achievement.iconName</code> to resolve the icon. Currently wired to lucide-react icon names. Upgrading to custom SVG icons requires updating <code>AchievementCard</code> to use <code>&lt;img src={`/icons/achievements/${iconName}.svg`}&gt;</code> instead.
+  </div>
+
+  <table>
+    <thead><tr><th>Icon name</th><th>Achievement</th><th>Visual concept</th><th>Color</th></tr></thead>
+    <tbody>
+      <tr><td><code>first-card</code></td><td>Debut Card — create your first card</td><td>A single shining card with a star burst</td><td>Gold</td></tr>
+      <tr><td><code>hat-trick</code></td><td>Hat-Trick — score 3 goals in one match</td><td>Three footballs in a triangle</td><td>Gold</td></tr>
+      <tr><td><code>clean-sheet</code></td><td>Clean Sheet — 0 goals conceded</td><td>A goalkeeper glove blocking a ball</td><td>Blue</td></tr>
+      <tr><td><code>mvp</code></td><td>MVP — Player of the Match rating ≥ 9.0</td><td>Crown with a star</td><td>Legendary gold</td></tr>
+      <tr><td><code>cards-10</code></td><td>Collector — generate 10 cards</td><td>Stacked cards with "10" badge</td><td>Silver</td></tr>
+      <tr><td><code>cards-50</code></td><td>Master Collector — generate 50 cards</td><td>Stack of 50 cards with glow</td><td>Gold</td></tr>
+      <tr><td><code>legendary</code></td><td>Legend — earn a Legendary rarity card</td><td>Diamond with gold rays</td><td>Legendary gradient</td></tr>
+      <tr><td><code>sharer</code></td><td>Social — share a card for the first time</td><td>Card with share arrows around it</td><td>Green</td></tr>
+      <tr><td><code>printer</code></td><td>Print Master — export a PDF</td><td>Printer with a card coming out</td><td>Purple</td></tr>
+      <tr><td><code>ai-artist</code></td><td>AI Artist — use AI style transfer</td><td>Palette with sparkle/AI icon</td><td>Cyan/gold</td></tr>
+      <tr><td><code>season-champ</code></td><td>Season Champion — team wins season</td><td>Trophy with confetti</td><td>Gold</td></tr>
+      <tr><td><code>first-team</code></td><td>Team Builder — create a team</td><td>Group of player silhouettes</td><td>Orange</td></tr>
+      <tr><td><code>xp-1000</code></td><td>Veteran — reach 1000 XP</td><td>XP bar fully filled with star</td><td>Silver</td></tr>
+      <tr><td><code>mythic</code></td><td>Mythic — earn a Mythic rarity card</td><td>Holographic star with rainbow aura</td><td>Holographic</td></tr>
+      <tr><td><code>club-founder</code></td><td>Club Founder — create a club</td><td>Shield being constructed / built</td><td>Purple</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:12px">Icons should be consistent in visual weight and style — same stroke width, same corner rounding, same padding within the 48×48 frame. Use a 4px stroke on a transparent background.</p>
+</div>
+
+<!-- ══════════════ CARD TEMPLATES ══════════════ -->
+<div class="section" id="templates">
+  <h2>Card Template Previews</h2>
+  <p class="desc">Each template in Firestore has a <code>previewURL</code> pointing to a preview image in Firebase Storage (<code>templates/{templateId}/preview.png</code>). These are shown in the <code>CardGeneratorWizard</code> template picker step. Size: <strong>420×588 px</strong> (exact card ratio).</p>
+
+  <div class="note">
+    <strong>These are not editable templates</strong> — they are pre-rendered PNG images of what a finished card looks like using each template. Create them by designing the card backgrounds in Figma/Photoshop at 420×588px, export as PNG, upload to Firebase Storage, and reference the URL in the template Firestore document.
+  </div>
+
+  <table>
+    <thead><tr><th>Template name</th><th>Visual style</th><th>Background concept</th><th>Rarity range</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Classic Gold</strong><br><code>classic-gold</code></td><td>Premium dark, gold borders</td><td>Deep black with gold gradient border, subtle diagonal texture</td><td>Legendary, Epic</td></tr>
+      <tr><td><strong>Dark Elite</strong><br><code>dark-elite</code></td><td>Ultra premium matte black</td><td>Near-black with silver trim, no color — serious and sleek</td><td>Rare, Epic</td></tr>
+      <tr><td><strong>Night Stadium</strong><br><code>night-stadium</code></td><td>Stadium atmosphere</td><td>Blurred stadium lights bokeh as background, dramatic</td><td>Common, Uncommon, Rare</td></tr>
+      <tr><td><strong>Vintage Panini</strong><br><code>vintage-panini</code></td><td>Retro sticker style</td><td>Warm off-white with thin border frame, worn paper texture</td><td>Common, Uncommon</td></tr>
+      <tr><td><strong>Comic Hero</strong><br><code>comic-hero</code></td><td>Bold comic book</td><td>Halftone dots, bold colored panels, action lines radiating from center</td><td>Rare, Epic</td></tr>
+      <tr><td><strong>Neon City</strong><br><code>neon-city</code></td><td>Cyberpunk / futuristic</td><td>Dark city silhouette with neon pink/cyan grid lines glowing</td><td>Epic, Legendary</td></tr>
+      <tr><td><strong>Grass &amp; Field</strong><br><code>grass-field</code></td><td>Natural football</td><td>Aerial view of green pitch with white line markings</td><td>Common, Uncommon</td></tr>
+      <tr><td><strong>Fire Storm</strong><br><code>fire-storm</code></td><td>Intense / dramatic</td><td>Fiery orange-red gradient bursting from center, ember particles</td><td>Legendary, Mythic</td></tr>
+      <tr><td><strong>Hologram</strong><br><code>hologram</code></td><td>Futuristic iridescent</td><td>Shifting rainbow foil texture — silver base with spectrum highlights</td><td>Mythic, Limited</td></tr>
+      <tr><td><strong>Club Custom</strong><br><code>club-custom-{clubId}</code></td><td>Club branding</td><td>Club primary color gradient with club logo watermark. Generated dynamically per club.</td><td>All (Club tier only)</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:12px">Each preview should show a <em>sample player</em> (use a placeholder silhouette) with sample stats populated (goals: 12, assists: 8, rating: 8.5) so the user can judge how their real card will look.</p>
+</div>
+
+<!-- ══════════════ LANDING PAGE ══════════════ -->
+<div class="section" id="landing">
+  <h2>Landing Page Feature Images</h2>
+  <p class="desc">Used on the public landing page (<code>src/app/[locale]/page.tsx</code>). These are the "selling" visuals — they convince a parent or coach to sign up. Dark, premium, football-themed.</p>
+
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-card-preview hero-preview" style="gap:6px">
+        <div class="canvas-mock" style="transform:rotate(-8deg);margin-right:-20px;opacity:.7"></div>
+        <div class="canvas-mock"></div>
+        <div class="canvas-mock" style="transform:rotate(8deg);margin-left:-20px;opacity:.7"></div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Hero Feature Image</div>
+        <div class="asset-card-file">public/marketing/hero-cards.png</div>
+        <p>3 sample cards fanned out dramatically. Gold glows. Premium dark backdrop. This is the first thing visitors see. Should immediately communicate "trading cards for your football player."</p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">1200×800</span><span class="spec">@2x</span>
+          <span class="badge p2">P2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview hero-preview">✨</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">AI Studio Feature</div>
+        <div class="asset-card-file">public/marketing/feature-ai.png</div>
+        <p>Shows the AI transformation: before/after of a player photo being styled. Glowing AI sparkles. Warm gold light effect on the result.</p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">800×600</span>
+          <span class="badge p3">P3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview hero-preview">🖨️</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Print Feature</div>
+        <div class="asset-card-file">public/marketing/feature-print.png</div>
+        <p>Physical printed cards laid out on a wooden table — A4 sheet with card grid visible. Premium photography feel even if it's an illustration.</p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">800×600</span>
+          <span class="badge p3">P3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview hero-preview">🏅</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Achievements Feature</div>
+        <div class="asset-card-file">public/marketing/feature-achievements.png</div>
+        <p>XP bar filling up, level badge appearing, achievement badges popping in. Gamification energy — kids love this section.</p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">800×600</span>
+          <span class="badge p3">P3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Hero background</h3>
+  <p>The landing page hero section uses a CSS gradient (<code>.gradient-hero</code>) — no image file required there. However, a subtle <strong>stadium atmosphere texture</strong> can be added as a low-opacity overlay:</p>
+  <div class="asset-card" style="max-width:360px">
+    <div class="asset-card-preview" style="background:linear-gradient(rgba(9,9,11,.85),rgba(9,9,11,.85)),url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22><rect width=%2220%22 height=%2220%22 fill=%22%23854d0e%22 opacity=%22.05%22/></svg>')"></div>
+    <div class="asset-card-body">
+      <div class="asset-card-name">Hero Background Texture</div>
+      <div class="asset-card-file">public/marketing/hero-bg-texture.png</div>
+      <p>Subtle dark stadium lights bokeh at 8–12% opacity behind the hero gradient. 1920×1080px minimum. Only visible on large screens.</p>
+      <div class="asset-card-meta"><span class="spec">PNG</span><span class="spec">1920×1080</span><span class="spec">8% opacity overlay</span><span class="badge p4">P4</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ OG IMAGES ══════════════ -->
+<div class="section" id="og">
+  <h2>Social &amp; Open Graph Images</h2>
+  <p class="desc">Shown when the app URL is shared on Facebook, WhatsApp, Twitter, iMessage. Critical for trust — a missing OG image looks unprofessional. Defined in <code>src/app/[locale]/layout.tsx</code> metadata.</p>
+
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-card-preview og-preview" style="aspect-ratio:1200/630;height:80px;flex-direction:column;gap:4px">
+        <div style="font-size:10px;color:#d97706;font-weight:800;letter-spacing:2px">FOTBALOVÉ KARTIČKY</div>
+        <div class="canvas-mock" style="width:36px;height:50px"></div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Main OG Image</div>
+        <div class="asset-card-file">public/og-image.png</div>
+        <p>Default social preview for the landing page and any page without a specific OG image. Logo + tagline + sample cards on dark background. <strong>Most important marketing asset.</strong></p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">1200×630</span><span class="spec">72dpi</span>
+          <span class="badge p1">P1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview og-preview" style="height:80px">
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#d97706;font-weight:800">FOTBALOVÉ KARTIČKY</div>
+          <div style="font-size:8px;color:#a1a1aa;margin-top:2px">Personalizované kartičky pro tvůj tým</div>
+        </div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Twitter / X Card</div>
+        <div class="asset-card-file">public/og-twitter.png</div>
+        <p>Summary large image card for Twitter/X. Slightly different crop than OG — safe area is more centered. Same design, tweaked composition.</p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">1200×628</span>
+          <span class="badge p3">P3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview og-preview" style="height:80px">
+        <div class="canvas-mock" style="width:54px;height:76px"></div>
+      </div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Card Share OG (fallback)</div>
+        <div class="asset-card-file">public/og-card-fallback.png</div>
+        <p>Fallback for the public card viewer (<code>/card/:shareSlug</code>) before a card image is generated. Shows a generic "card reveal" tease. Ideally, individual card OG images are generated dynamically, but this is the static fallback.</p>
+        <div class="asset-card-meta">
+          <span class="spec">PNG</span><span class="spec">1200×630</span>
+          <span class="badge p2">P2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>OG image composition guide:</strong> Dark background <code>#09090b</code>. Logo top-left or centered. Tagline "Personalizované fotbalové kartičky pro hráče a týmy" below. 2–3 sample cards on the right (rotated slightly for depth). Text must be readable at thumbnail preview sizes (300×158px on some platforms). Keep all text within the center 80% safe zone — platform previews sometimes crop edges.
+  </div>
+</div>
+
+<!-- ══════════════ SCREENSHOTS ══════════════ -->
+<div class="section" id="screenshots">
+  <h2>PWA Screenshots</h2>
+  <p class="desc">Referenced in <code>public/manifest.json</code> — shown in browser PWA install dialogs to give users a preview. Should be actual app screenshots (dark theme), not mockups.</p>
+
+  <table>
+    <thead><tr><th>File</th><th>Size</th><th>Form factor</th><th>Screen to capture</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>public/screenshots/dashboard.png</code></td>
+        <td>1280×720</td>
+        <td>Wide (desktop)</td>
+        <td>Dashboard page with XP bar, stat counters, recent cards grid — dark theme active. Already referenced in manifest.</td>
+        <td><span class="badge p2">P2</span></td>
+      </tr>
+      <tr>
+        <td><code>public/screenshots/cards-mobile.png</code></td>
+        <td>390×844</td>
+        <td>Narrow (mobile)</td>
+        <td>Cards collection on mobile viewport — shows bottom nav, card grid, gold brand colors. Add to manifest as <code>form_factor: "narrow"</code>.</td>
+        <td><span class="badge p3">P3</span></td>
+      </tr>
+      <tr>
+        <td><code>public/screenshots/card-detail.png</code></td>
+        <td>1280×720</td>
+        <td>Wide (desktop)</td>
+        <td>Card detail page with a Legendary card displayed — highlights the premium visual quality. Second screenshot in the install dialog.</td>
+        <td><span class="badge p3">P3</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Screenshots can be taken directly from the browser (DevTools device mode, or Puppeteer). The dashboard screenshot needs real card data visible — seed the database first before capturing.</p>
+</div>
+
+<!-- ══════════════ SUBSCRIPTION ══════════════ -->
+<div class="section" id="subscription">
+  <h2>Subscription Tier Illustrations</h2>
+  <p class="desc">Used on <code>/settings/subscription</code> page and the <code>UpgradeDialog</code>. One small illustration per tier to make the plans visually distinct and desirable.</p>
+
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-card-preview icon-preview">🆓</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Free Tier</div>
+        <div class="asset-card-file">public/tiers/tier-free.svg</div>
+        <p>Simple card with a plain border. "Getting started" feel. Muted, not premium.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">80×80</span><span class="badge p3">P3</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview" style="background:linear-gradient(135deg,#1c1008,#3d1f00)">⭐</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Premium Tier</div>
+        <div class="asset-card-file">public/tiers/tier-premium.svg</div>
+        <p>A gold card with a single star. Warm glow. "Most popular" badge candidate. Premium feel.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">80×80</span><span class="badge p3">P3</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview" style="background:linear-gradient(135deg,#0f1a2e,#1a3a5e)">⚡</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Team Tier</div>
+        <div class="asset-card-file">public/tiers/tier-team.svg</div>
+        <p>Multiple cards fanned out representing a full squad. Blue-toned for contrast against gold of Premium.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">80×80</span><span class="badge p3">P3</span></div>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-card-preview" style="background:linear-gradient(135deg,#1a0a2e,#2d1a4e)">🏟️</div>
+      <div class="asset-card-body">
+        <div class="asset-card-name">Club Tier</div>
+        <div class="asset-card-file">public/tiers/tier-club.svg</div>
+        <p>Shield/crest with a crown on top. Represents the organizational/enterprise tier. Purple/violet tones to differentiate.</p>
+        <div class="asset-card-meta"><span class="spec">SVG</span><span class="spec">80×80</span><span class="badge p3">P3</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MASTER CHECKLIST ══════════════ -->
+<div class="section" id="checklist">
+  <h2>Master Checklist</h2>
+  <p class="desc">All assets in priority order. Use this as the handoff checklist with a designer.</p>
+
+  <h3>🔴 P1 — Must exist before launch (app broken without these)</h3>
+  <table>
+    <thead><tr><th>Asset</th><th>File path</th><th>Format</th><th>Size</th></tr></thead>
+    <tbody>
+      <tr><td>App icon / mark</td><td><code>logo-mark.svg</code></td><td>SVG</td><td>—</td></tr>
+      <tr><td>Logo horizontal</td><td><code>public/logo-horizontal.svg</code></td><td>SVG + PNG</td><td>—</td></tr>
+      <tr><td>Favicon .ico</td><td><code>public/favicon.ico</code></td><td>ICO</td><td>16+32px</td></tr>
+      <tr><td>Favicon 16px</td><td><code>public/favicon-16x16.png</code></td><td>PNG</td><td>16×16</td></tr>
+      <tr><td>Favicon 32px</td><td><code>public/favicon-32x32.png</code></td><td>PNG</td><td>32×32</td></tr>
+      <tr><td>Favicon SVG</td><td><code>public/favicon.svg</code></td><td>SVG</td><td>—</td></tr>
+      <tr><td>Apple touch icon</td><td><code>public/apple-touch-icon.png</code></td><td>PNG</td><td>180×180</td></tr>
+      <tr><td>PWA icon 72</td><td><code>public/icons/icon-72.png</code></td><td>PNG</td><td>72×72</td></tr>
+      <tr><td>PWA icon 96</td><td><code>public/icons/icon-96.png</code></td><td>PNG</td><td>96×96</td></tr>
+      <tr><td>PWA icon 128</td><td><code>public/icons/icon-128.png</code></td><td>PNG</td><td>128×128</td></tr>
+      <tr><td>PWA icon 192 (maskable)</td><td><code>public/icons/icon-192.png</code></td><td>PNG</td><td>192×192</td></tr>
+      <tr><td>PWA icon 512 (maskable)</td><td><code>public/icons/icon-512.png</code></td><td>PNG</td><td>512×512</td></tr>
+      <tr><td>Player photo placeholder</td><td><code>public/placeholders/player-avatar.svg</code></td><td>SVG</td><td>—</td></tr>
+      <tr><td>Team logo placeholder</td><td><code>public/placeholders/team-logo.svg</code></td><td>SVG</td><td>—</td></tr>
+      <tr><td>Card image placeholder</td><td><code>public/placeholders/card-image.svg</code></td><td>SVG</td><td>3:4.2 ratio</td></tr>
+      <tr><td>No Cards empty state</td><td><code>public/illustrations/empty-cards.svg</code></td><td>SVG</td><td>280×200</td></tr>
+      <tr><td>Main OG image</td><td><code>public/og-image.png</code></td><td>PNG</td><td>1200×630</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🟠 P2 — Required before users see those features</h3>
+  <table>
+    <thead><tr><th>Asset</th><th>File path</th></tr></thead>
+    <tbody>
+      <tr><td>Logo stacked</td><td><code>public/logo-stacked.svg</code></td></tr>
+      <tr><td>Safari pinned tab</td><td><code>public/safari-pinned-tab.svg</code></td></tr>
+      <tr><td>PWA icon 384</td><td><code>public/icons/icon-384.png</code></td></tr>
+      <tr><td>Club logo placeholder</td><td><code>public/placeholders/club-logo.svg</code></td></tr>
+      <tr><td>No Players empty state</td><td><code>public/illustrations/empty-players.svg</code></td></tr>
+      <tr><td>No Teams empty state</td><td><code>public/illustrations/empty-teams.svg</code></td></tr>
+      <tr><td>No Matches empty state</td><td><code>public/illustrations/empty-matches.svg</code></td></tr>
+      <tr><td>AI Generating animated</td><td><code>public/illustrations/ai-generating.svg</code></td></tr>
+      <tr><td>Error state illustration</td><td><code>public/illustrations/error.svg</code></td></tr>
+      <tr><td>Offline page illustration</td><td><code>public/illustrations/offline.svg</code></td></tr>
+      <tr><td>Card share OG fallback</td><td><code>public/og-card-fallback.png</code></td></tr>
+      <tr><td>PWA screenshot — dashboard</td><td><code>public/screenshots/dashboard.png</code></td></tr>
+      <tr><td>Card template previews (all 9)</td><td><code>templates/{id}/preview.png</code> in Firebase Storage</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🟡 P3 — Nice to have at launch</h3>
+  <table>
+    <thead><tr><th>Asset</th><th>File path</th></tr></thead>
+    <tbody>
+      <tr><td>Logo light variant</td><td><code>public/logo-light.svg</code></td></tr>
+      <tr><td>Apple touch icon precomposed</td><td><code>public/apple-touch-icon-precomposed.png</code></td></tr>
+      <tr><td>Windows tile</td><td><code>public/mstile-150x150.png</code></td></tr>
+      <tr><td>No Achievements empty state</td><td><code>public/illustrations/empty-achievements.svg</code></td></tr>
+      <tr><td>All achievement icons (15)</td><td><code>public/icons/achievements/*.svg</code></td></tr>
+      <tr><td>Hero feature image — cards</td><td><code>public/marketing/hero-cards.png</code></td></tr>
+      <tr><td>Feature — AI Studio</td><td><code>public/marketing/feature-ai.png</code></td></tr>
+      <tr><td>Feature — Print</td><td><code>public/marketing/feature-print.png</code></td></tr>
+      <tr><td>Feature — Achievements</td><td><code>public/marketing/feature-achievements.png</code></td></tr>
+      <tr><td>Twitter / X card</td><td><code>public/og-twitter.png</code></td></tr>
+      <tr><td>PWA screenshot — cards mobile</td><td><code>public/screenshots/cards-mobile.png</code></td></tr>
+      <tr><td>Subscription tier SVGs (4)</td><td><code>public/tiers/tier-*.svg</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>⚪ P4 — Post-launch polish</h3>
+  <table>
+    <thead><tr><th>Asset</th><th>File path</th></tr></thead>
+    <tbody>
+      <tr><td>Logo monogram</td><td><code>public/logo-monogram.svg</code></td></tr>
+      <tr><td>Logo mono (white/black)</td><td><code>public/logo-mono-white.svg</code> / <code>logo-mono-black.svg</code></td></tr>
+      <tr><td>Hero bg texture</td><td><code>public/marketing/hero-bg-texture.png</code></td></tr>
+      <tr><td>PWA screenshot — card detail</td><td><code>public/screenshots/card-detail.png</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════ EXPORT GUIDELINES ══════════════ -->
+<div class="section" id="export">
+  <h2>Export Guidelines</h2>
+
+  <div class="two-col">
+    <div>
+      <h3>SVG requirements</h3>
+      <ul>
+        <li>Flatten all text to paths — no font embedding in SVGs</li>
+        <li>Remove invisible layers and artboard backgrounds</li>
+        <li>Optimize with SVGO (removes unnecessary attributes)</li>
+        <li>Use <code>viewBox</code> not fixed <code>width</code>/<code>height</code> on root</li>
+        <li>Illustrations: max 8kb after optimization</li>
+        <li>Icons: max 2kb after optimization</li>
+        <li>Dark mode adaptable: use <code>currentColor</code> for strokes/fills where possible</li>
+      </ul>
+    </div>
+    <div>
+      <h3>PNG requirements</h3>
+      <ul>
+        <li>Export at <strong>@2x resolution</strong> minimum (display size × 2)</li>
+        <li>Compress with <strong>TinyPNG</strong> or <strong>Squoosh</strong> — target &lt;200kb for marketing images</li>
+        <li>PWA icons: PNG-24 (no transparency for maskable, transparent allowed for others)</li>
+        <li>OG images: JPEG quality 90 is acceptable to keep under 300kb</li>
+        <li>Template previews: PNG-24 at exactly 420×588px</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Delivery format</h3>
+      <ul>
+        <li>Figma file with all assets on labeled frames</li>
+        <li>Exported to a zip: <code>/svg/</code>, <code>/png/</code>, <code>/ico/</code> folders</li>
+        <li>File naming: lowercase, hyphens, no spaces (e.g. <code>icon-192.png</code>)</li>
+        <li>Template previews uploaded directly to Firebase Storage by developer</li>
+        <li>All other assets placed in <code>public/</code> directory</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Testing checklist</h3>
+      <ul>
+        <li>Favicons: verify in Chrome, Firefox, Safari, and Edge browser tabs</li>
+        <li>PWA icons: install app on Android and verify home screen icon</li>
+        <li>Apple touch: add to iOS home screen — check rounding and clarity</li>
+        <li>OG images: test with <strong>opengraph.xyz</strong> or Meta's debugger</li>
+        <li>Empty states: trigger each empty state in the app to verify sizing</li>
+        <li>Placeholders: create player/team with no photo and verify</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:20px">
+    <strong>Total estimated design effort:</strong> P1 assets (~2–3 hours for logo + icons + favicon pack using a generator tool + 2–3 placeholders). P2 assets (~1 day for illustrations + OG image + template previews). P3 assets (~1–2 days). The logo and favicons are the true blocker — everything else can ship as a second pass.
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+  const links = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('[id]');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -75% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
