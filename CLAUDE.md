@@ -66,7 +66,7 @@ When unsure about a pattern, check flive-web first.
 | Storage | Firebase Storage |
 | Functions | Firebase Cloud Functions |
 | Analytics | Firebase Analytics |
-| AI text | OpenAI GPT-4o-mini (Cloud Functions only) |
+| AI text | Anthropic Claude via `@anthropic-ai/sdk` (Cloud Functions only) |
 | AI images | Replicate API (Cloud Functions only) |
 | PWA | Firebase Cloud Messaging + manifest.json |
 
@@ -110,7 +110,7 @@ No real-time Firestore listeners except one: while `card.aiStatus === "pending" 
 
 ### AI calls
 
-All OpenAI and Replicate API calls are made from Firebase Cloud Functions — **never from the client**. API keys are server-side only and never in `.env.local`.
+All Anthropic and Replicate API calls are made from Firebase Cloud Functions — **never from the client**. API keys are server-side only and never in `.env.local`. Keys are Firebase secrets declared with `defineSecret` and listed in each function's `secrets` option — v2 functions don't receive undeclared secrets.
 
 Client flow:
 1. Client calls Cloud Function HTTP endpoint: `POST /functionName { ...args }`
@@ -211,7 +211,7 @@ NEXT_PUBLIC_FIREBASE_VAPID_KEY
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 
 # Server-side — Cloud Functions only, NEVER in .env.local
-OPENAI_API_KEY
+ANTHROPIC_API_KEY
 REPLICATE_API_KEY
 ```
 

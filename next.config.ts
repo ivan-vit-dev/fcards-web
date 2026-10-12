@@ -6,7 +6,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const CSP = [
   "default-src 'self'",
   // Next.js needs unsafe-inline for its own scripts; unsafe-eval for Firebase SDK in dev
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com",
+  // apis.google.com: Firebase Auth loads its Google sign-in helper from there
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.gstatic.com https://apis.google.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://replicate.delivery",

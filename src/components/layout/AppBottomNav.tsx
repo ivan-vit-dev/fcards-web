@@ -8,8 +8,11 @@ import {
   CreditCard,
   Sparkles,
   Trophy,
+  Building2,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
 
 const items = [
   { href: "/dashboard", label: "Přehled", icon: LayoutDashboard },
@@ -23,11 +26,20 @@ export function AppBottomNav() {
   const pathname = usePathname();
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
+  const role = useAuthStore((s) => s.user?.role);
+
+  const roleItem =
+    role === "superAdmin"
+      ? { href: "/admin", label: "Admin", icon: Shield }
+      : role === "clubAdmin"
+      ? { href: "/settings/club", label: "Klub", icon: Building2 }
+      : null;
+  const visibleItems = roleItem ? [...items, roleItem] : items;
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="flex items-center justify-around h-16 px-2">
-        {items.map(({ href, label, icon: Icon }) => {
+        {visibleItems.map(({ href, label, icon: Icon }) => {
           const fullHref = `/${locale}${href}`;
           const active = pathname.startsWith(fullHref);
           return (

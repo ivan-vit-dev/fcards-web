@@ -51,14 +51,17 @@ export default function AdminTemplatesPage() {
     defaultValues: { requiredTier: "free" },
   });
 
-  const load = () => {
-    setLoading(true);
+  const fetchTemplates = () =>
     getAllTemplates()
       .then(setTemplates)
       .finally(() => setLoading(false));
+
+  const load = () => {
+    setLoading(true);
+    fetchTemplates();
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { fetchTemplates(); }, []);
 
   const handleCreate = async (data: FormData) => {
     setCreating(true);

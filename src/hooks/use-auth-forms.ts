@@ -67,7 +67,8 @@ export function useLoginForm() {
         userDoc = await createUserDoc(cred.user.uid, {
           email: cred.user.email ?? "",
           displayName: cred.user.displayName ?? "",
-          photoURL: cred.user.photoURL ?? undefined,
+          // Firestore rejects undefined values, so only include the photo when Google has one
+          ...(cred.user.photoURL ? { photoURL: cred.user.photoURL } : {}),
         });
       }
       setUser(userDoc);

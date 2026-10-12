@@ -32,11 +32,8 @@ export default function ClubSettingsPage() {
       router.replace(`/${locale}/dashboard`);
       return;
     }
-    if (!user.clubId) {
-      setLoading(false);
-      return;
-    }
-    getClubDoc(user.clubId).then((c) => {
+    const fetchClub = user.clubId ? getClubDoc(user.clubId) : Promise.resolve(null);
+    fetchClub.then((c) => {
       setClub(c);
       setLoading(false);
     });

@@ -21,6 +21,10 @@ export const metadata: Metadata = {
   description:
     "Personalizované fotbalové kartičky pro hráče, týmy a kluby. Generuj, sbírej a sdílej.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192" }],
+    apple: "/icons/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

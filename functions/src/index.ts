@@ -1,8 +1,9 @@
 import * as admin from "firebase-admin";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { defineSecret } from "firebase-functions/params";
 import Replicate from "replicate";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -10,8 +11,12 @@ const storage = admin.storage();
 
 setGlobalOptions({ region: "europe-west1", timeoutSeconds: 300 });
 
-const replicate = new Replicate({ auth: process.env.REPLICATE_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// v2 functions only receive secrets they declare, so each onCall lists its own.
+const REPLICATE_API_KEY = defineSecret("REPLICATE_API_KEY");
+const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+
+const replicateOpts = { secrets: [REPLICATE_API_KEY] };
+const getReplicate = () => new Replicate({ auth: REPLICATE_API_KEY.value() });
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -52,8 +57,8 @@ async function urlToBuffer(url: string): Promise<Buffer> {
 
 // ─── removeBackground ─────────────────────────────────────────────────────────
 
-export const removeBackground = onCall(async (request) => {
-  const uid = requireAuth(request);
+export const removeBackground = onCall(replicateOpts, async (request) => {
+  requireAuth(request);
   const { cardId, imageUrl } = request.data as { cardId: string; imageUrl: string };
 
   if (!cardId || !imageUrl) {
@@ -63,7 +68,7 @@ export const removeBackground = onCall(async (request) => {
   await setCardStatus(cardId, "processing");
 
   try {
-    const output = await replicate.run(
+    const output = await getReplicate().run(
       "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285d65c14638cc5f36f34befaf1",
       { input: { image: imageUrl } }
     );
@@ -82,7 +87,7 @@ export const removeBackground = onCall(async (request) => {
 
 // ─── enhanceFace ──────────────────────────────────────────────────────────────
 
-export const enhanceFace = onCall(async (request) => {
+export const enhanceFace = onCall(replicateOpts, async (request) => {
   requireAuth(request);
   const { cardId, imageUrl } = request.data as { cardId: string; imageUrl: string };
 
@@ -93,7 +98,7 @@ export const enhanceFace = onCall(async (request) => {
   await setCardStatus(cardId, "processing");
 
   try {
-    const output = await replicate.run(
+    const output = await getReplicate().run(
       "tencentarc/gfpgan:9283608cc6b7be6b65a8e44983db012355fde4132009bf99d976b2f0896856a3",
       { input: { img: imageUrl, version: "v1.4", scale: 2 } }
     );
@@ -112,7 +117,7 @@ export const enhanceFace = onCall(async (request) => {
 
 // ─── generateActionPose ───────────────────────────────────────────────────────
 
-export const generateActionPose = onCall(async (request) => {
+export const generateActionPose = onCall(replicateOpts, async (request) => {
   requireAuth(request);
   const { cardId, playerName, position } = request.data as {
     cardId: string;
@@ -134,7 +139,7 @@ export const generateActionPose = onCall(async (request) => {
   const prompt = `Professional football player ${playerName}, ${positionPrompts[position] ?? "football action pose"}, stadium background, dramatic lighting, photorealistic, 8k`;
 
   try {
-    const output = await replicate.run(
+    const output = await getReplicate().run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
@@ -162,7 +167,7 @@ export const generateActionPose = onCall(async (request) => {
 
 // ─── generateStadium ──────────────────────────────────────────────────────────
 
-export const generateStadium = onCall(async (request) => {
+export const generateStadium = onCall(replicateOpts, async (request) => {
   requireAuth(request);
   const { cardId, stadiumStyle } = request.data as {
     cardId: string;
@@ -183,7 +188,7 @@ export const generateStadium = onCall(async (request) => {
   const prompt = `${styleMap[stadiumStyle ?? "night"] ?? "football stadium"}, ultra wide angle, professional photography, 8k, epic atmosphere`;
 
   try {
-    const output = await replicate.run(
+    const output = await getReplicate().run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
@@ -210,7 +215,7 @@ export const generateStadium = onCall(async (request) => {
 
 // ─── generateCardStory ────────────────────────────────────────────────────────
 
-export const generateCardStory = onCall(async (request) => {
+export const generateCardStory = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
   requireAuth(request);
   const { cardId, playerName, position, goals, assists, rating } = request.data as {
     cardId: string;
@@ -237,20 +242,31 @@ export const generateCardStory = onCall(async (request) => {
   const userPrompt = `Napiš popis pro kartičku hráče ${playerName} (${positionCs[position] ?? position}). Statistiky: ${goals ?? 0} gólů, ${assists ?? 0} asistencí, hodnocení ${rating ?? 7}/10.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 150,
-      temperature: 0.8,
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+    const response = await anthropic.beta.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4000,
+      output_config: { effort: "low" },
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
     });
 
-    const story = completion.choices[0]?.message?.content ?? "";
+    if (response.stop_reason === "refusal") {
+      throw new Error(`Story refused: ${response.stop_details?.category ?? "unknown"}`);
+    }
+
+    const story = response.content
+      .flatMap((block) => (block.type === "text" ? [block.text] : []))
+      .join("")
+      .trim();
+    if (!story) throw new Error("Empty story");
+
     await setCardStatus(cardId, "done", { aiStory: story });
     return { success: true, story };
-  } catch {
+  } catch (err) {
+    console.error("generateCardStory failed", err);
     await setCardStatus(cardId, "error");
     throw new HttpsError("internal", "Card story generation failed.");
   }
@@ -268,7 +284,7 @@ const STYLE_PROMPTS: Record<string, string> = {
   superhero: "superhero comic style, Marvel DC art, dynamic pose, cape, dramatic lighting",
 };
 
-export const applyAIStyle = onCall(async (request) => {
+export const applyAIStyle = onCall(replicateOpts, async (request) => {
   requireAuth(request);
   const { cardId, imageUrl, style } = request.data as {
     cardId: string;
@@ -285,7 +301,7 @@ export const applyAIStyle = onCall(async (request) => {
   const stylePrompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.fifa;
 
   try {
-    const output = await replicate.run(
+    const output = await getReplicate().run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {

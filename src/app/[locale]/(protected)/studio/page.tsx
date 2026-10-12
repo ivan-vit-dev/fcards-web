@@ -87,7 +87,7 @@ const FEATURES: Feature[] = [
     id: "card-story",
     icon: BookOpen,
     titleCs: "Příběh kartičky",
-    descriptionCs: "GPT-4o-mini napíše inspirativní popis hráče v češtině.",
+    descriptionCs: "AI napíše inspirativní popis hráče v češtině.",
     tier: "premium",
     available: true,
   },
@@ -314,7 +314,7 @@ export default function StudioPage() {
             {activeFeature === "card-story" && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  GPT-4o-mini napíše inspirativní popis hráče v češtině na základě jeho statistik.
+                  AI napíše inspirativní popis hráče v češtině na základě jeho statistik.
                 </p>
                 {isRunning ? (
                   <div className="flex justify-center py-8">

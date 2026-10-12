@@ -45,8 +45,7 @@ export default function AdminUsersPage() {
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
-  const load = () => {
-    setLoading(true);
+  const fetchUsers = () =>
     getAllUsers(200)
       .then((list) => {
         setUsers(list);
@@ -57,9 +56,13 @@ export default function AdminUsersPage() {
         setEdits(initial);
       })
       .finally(() => setLoading(false));
+
+  const load = () => {
+    setLoading(true);
+    fetchUsers();
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { fetchUsers(); }, []);
 
   const setEdit = <K extends keyof EditState>(
     uid: string,

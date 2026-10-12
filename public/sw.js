@@ -79,7 +79,11 @@ self.addEventListener("fetch", (event) => {
         }
         return resp;
       })
-      .catch(() => caches.match(request))
+      .catch(() =>
+        caches.match(request).then(
+          (cached) => cached ?? (request.mode === "navigate" ? caches.match("/offline") : undefined)
+        )
+      )
   );
 });
 

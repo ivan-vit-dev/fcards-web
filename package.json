@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:templates": "tsx --env-file=.env scripts/seed-templates.ts",
+    "seed:achievements": "tsx --env-file=.env scripts/seed-achievements.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -43,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminStats } from "@/lib/firebaseServices";
-import { Users, CreditCard, Building2, Layers } from "lucide-react";
+import { getAdminStats, seedDefaultData } from "@/lib/firebaseServices";
+import { Users, CreditCard, Building2, Layers, DatabaseZap } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
 
 interface Stats {
   users: number;
@@ -22,12 +24,35 @@ const statConfig = [
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     getAdminStats()
       .then(setStats)
+      .catch((err) => {
+        console.warn("[getAdminStats]", err);
+        toast.error("Nepodařilo se načíst statistiky");
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    try {
+      const { templates, achievements } = await seedDefaultData();
+      toast.success(
+        `Šablony: ${templates.created} nových, ${templates.updated} aktualizováno. ` +
+          `Úspěchy: ${achievements.created} nových, ${achievements.updated} aktualizováno.`,
+        { duration: 6000 }
+      );
+      setStats(await getAdminStats());
+    } catch (err) {
+      console.warn("[seedDefaultData]", err);
+      toast.error("Nepodařilo se nahrát výchozí data");
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -59,6 +84,20 @@ export default function AdminDashboard() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex-1">
+          <p className="text-sm font-semibold mb-1">Výchozí data</p>
+          <p className="text-sm text-muted-foreground">
+            Nahraje základní šablony kartiček a definice úspěchů. Lze spustit
+            opakovaně — existující záznamy se aktualizují, nevzniknou duplicity.
+          </p>
+        </div>
+        <Button onClick={handleSeed} disabled={seeding} className="gap-2 shrink-0">
+          <DatabaseZap className="h-4 w-4" />
+          {seeding ? "Nahrávám…" : "Nahrát výchozí data"}
+        </Button>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">

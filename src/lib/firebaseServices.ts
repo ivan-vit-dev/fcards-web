@@ -15,9 +15,11 @@ import {
   serverTimestamp,
   limit,
   getCountFromServer,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { generateSlug } from "./utils";
+import { SEED_ACHIEVEMENTS, SEED_TEMPLATES } from "./seedData";
 import type {
   User,
   Player,
@@ -455,4 +457,43 @@ export async function updateTemplate(
 
 export async function deleteTemplate(templateId: string): Promise<void> {
   await deleteDoc(doc(db, "templates", templateId));
+}
+
+// Stable IDs + merge make this safe to re-run: existing docs are updated, never duplicated.
+async function upsertById(
+  collectionName: string,
+  items: { id: string; data: Record<string, unknown> }[]
+): Promise<{ created: number; updated: number }> {
+  const existing = new Set(
+    (await getDocs(collection(db, collectionName))).docs.map((d) => d.id)
+  );
+  const batch = writeBatch(db);
+  let created = 0;
+  for (const { id, data } of items) {
+    const isNew = !existing.has(id);
+    if (isNew) created++;
+    batch.set(
+      doc(db, collectionName, id),
+      {
+        ...data,
+        ...(isNew ? { createdAt: serverTimestamp() } : {}),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+  await batch.commit();
+  return { created, updated: items.length - created };
+}
+
+export async function seedDefaultData() {
+  const templates = await upsertById(
+    "templates",
+    SEED_TEMPLATES.map(({ id, ...data }) => ({ id, data }))
+  );
+  const achievements = await upsertById(
+    "achievements",
+    SEED_ACHIEVEMENTS.map((a) => ({ id: a.key, data: { ...a } }))
+  );
+  return { templates, achievements };
 }

@@ -9,7 +9,9 @@
     "target": "es2020",
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "lib": ["es2020"]
+    "lib": ["es2022"],
+    "types": ["node"],
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": ["src"]
