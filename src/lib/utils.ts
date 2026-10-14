@@ -19,8 +19,17 @@ export function getFirebaseErrorMessage(code: string): string {
     "auth/invalid-credential": "Neplatné přihlašovací údaje.",
     "auth/account-exists-with-different-credential":
       "Účet s tímto e-mailem již existuje s jiným způsobem přihlášení.",
+    "auth/unauthorized-domain":
+      "Přihlášení přes Google není pro tuto adresu webu povolené (chybí v povolených doménách Firebase).",
+    "auth/popup-blocked": "Prohlížeč zablokoval okno přihlášení. Povolte vyskakovací okna a zkuste to znovu.",
+    "auth/cancelled-popup-request": "Přihlášení bylo přerušeno. Zkuste to znovu.",
+    "auth/operation-not-supported-in-this-environment":
+      "Tento prohlížeč přihlášení přes Google nepodporuje. Otevřete stránku v Chromu.",
+    "auth/web-storage-unsupported":
+      "Prohlížeč blokuje úložiště potřebné k přihlášení. Otevřete stránku v Chromu bez anonymního režimu.",
   };
-  return messages[code] ?? "Nastala neočekávaná chyba. Zkuste to znovu.";
+  // Unknown codes keep the code visible so problems on users' devices can be diagnosed.
+  return messages[code] ?? `Nastala neočekávaná chyba${code ? ` (${code})` : ""}. Zkuste to znovu.`;
 }
 
 export function formatDate(date: Date | string, locale = "cs-CZ"): string {
