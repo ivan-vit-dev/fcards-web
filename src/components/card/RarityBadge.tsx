@@ -23,17 +23,22 @@ const rarityClasses: Record<Rarity, string> = {
 
 interface RarityBadgeProps {
   rarity: Rarity;
+  /** "solid" stays readable on top of any card artwork. */
+  variant?: "soft" | "solid";
   className?: string;
 }
 
-export function RarityBadge({ rarity, className }: RarityBadgeProps) {
+export function RarityBadge({ rarity, variant = "soft", className }: RarityBadgeProps) {
+  const solid = variant === "solid" && rarity !== "mythic";
   return (
     <span
       className={cn(
         "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
-        rarityClasses[rarity],
+        solid ? "border-transparent shadow-sm" : rarityClasses[rarity],
+        rarity === "mythic" && rarityClasses.mythic,
         className
       )}
+      style={solid ? { background: `var(--rarity-${rarity})`, color: `var(--rarity-${rarity}-fg)` } : undefined}
     >
       {rarityLabels[rarity]}
     </span>

@@ -61,6 +61,13 @@ export default function PlayerDetailPage() {
     toast.success("Změny uloženy.");
   };
 
+  const handlePhotoUpload = async (photoURL: string) => {
+    if (!user || !player) return;
+    await updatePlayer(user.uid, player.id, { photoURL });
+    setPlayer((p) => (p ? { ...p, photoURL } : p));
+    updateStore(player.id, { photoURL });
+  };
+
   const handleDelete = async () => {
     if (!user || !player) return;
     await deletePlayer(user.uid, player.id);
@@ -170,6 +177,7 @@ export default function PlayerDetailPage() {
             userId={user.uid}
             player={player}
             onSubmit={handleSubmit}
+            onPhotoUpload={handlePhotoUpload}
           />
         )}
       </div>

@@ -75,7 +75,7 @@ export default function PublicCardPage() {
             {/* Card preview */}
             <div className="flex justify-center">
               <div ref={cardRef} className="inline-block">
-                <CardPreview card={card} player={player ?? undefined} size="lg" />
+                <CardPreview card={card} player={player ?? undefined} size="lg" interactive />
               </div>
             </div>
 
@@ -122,6 +122,17 @@ export default function PublicCardPage() {
                         <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
                       </div>
                     ))}
+                </div>
+              )}
+
+              {card.aiStory && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+                    Příběh kartičky
+                  </p>
+                  <blockquote className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-relaxed">
+                    {card.aiStory}
+                  </blockquote>
                 </div>
               )}
             </div>

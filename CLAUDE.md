@@ -57,7 +57,6 @@ When unsure about a pattern, check flive-web first.
 | Theming | next-themes (class-based, `.dark`) |
 | i18n | next-intl 4 (Czech primary, English secondary) |
 | Animation | framer-motion |
-| Canvas | konva + react-konva |
 | Export | html-to-image (previews), jsPDF (print PDFs) |
 | QR codes | qrcode.react |
 | Dates | date-fns |
@@ -99,14 +98,15 @@ Every Firestore document has `createdAt: Timestamp` and `updatedAt: Timestamp`. 
 
 No real-time Firestore listeners except one: while `card.aiStatus === "pending" | "processing"`, the card detail page opens an `onSnapshot` on `cards/{cardId}` to watch for AI completion. Close the listener when `aiStatus === "done" | "error"`.
 
-### Canvas / Card Editor
+### Card rendering / design system
 
-- Konva.js owns the card editor — single `Stage` initialized once in `useEffect` via `useRef`, never recreated on re-render
-- Card stage dimensions: **420 × 588 px** (standard 2.5:3.5 trading card ratio)
-- Layers (bottom to top): Background → Template → Photo → Stats → Text → Effects → Overlay
-- Effects (gold foil, hologram, neon, LED, fire) are Konva `Filter` objects — not CSS classes
-- Full-quality export: `stage.toBlob({ pixelRatio: 3 })` → upload to Firebase Storage → update `card.imageUrl`
-- Quick preview: `html-to-image` on a CSS card component (not Konva) for collection grid thumbnails
+- **One renderer**: `CardPreview` (HTML/CSS) draws every card — collection, detail, editor, public page, PNG download and print. Never add a second renderer.
+- A card's look is `card.design: CardDesign` = shape × frame × layout × palette × pattern × finish (`src/lib/cardDesign.ts`). Presets are curated combos (`PRESETS`, with `requiredTier`); custom mixing needs `CUSTOM_DESIGN_TIER`. Older cards without `design` resolve via `resolveDesign()`.
+- Shapes are CSS `clip-path` polygons in a 100 × 140 box; each declares `safeTop`/`safeBottom` so layouts keep badges/text inside the shape. Print draws the same outline as a cut line (`shapeOutline`).
+- Size everything inside a card in `em`/`%` of the card (sizes sm/md/lg/xl set width + base font). `%` padding/margin resolve against width — use spacer elements or absolute `top`/`bottom` for vertical offsets.
+- Export: `html-to-image` on the rendered card at `pixelRatio: 3` → `cards/{cardId}/output.png` → `card.imageUrl`. Print passes `flat` (no rarity glow halo).
+- Photo layers: `card.backgroundUrl` (AI stadium) behind `card.photoUrl ?? player.photoURL`. `design.popOut` lets the player break out of window layouts (needs a background-removed photo).
+- Visual direction (researched 2026-10): few iconic silhouettes, no dotted/striped decoration; gradients, stadium beams, geometric facets, giant jersey number, Topps-style refractor/prizm/lava/superfractor finishes, fine film grain. `interactive` cards tilt toward the pointer with a moving glare via registered CSS properties `--rx/--ry/--gx/--gy/--glare` (globals.css).
 
 ### AI calls
 
@@ -243,11 +243,11 @@ src/
 │   ├── ui/                          # shadcn/ui primitives
 │   ├── layout/                      # AppShell, AppSidebar, AppTopbar, AppBottomNav, PublicHeader
 │   ├── providers/                   # AuthProvider, ThemeProvider wrapper
-│   ├── card/                        # CardPreview, RarityBadge, CardGeneratorWizard
+│   ├── card/                        # CardPreview, DesignGallery, RarityBadge, CardGeneratorWizard
 │   ├── player/                      # PlayerCard, PlayerForm, PhotoUpload
 │   ├── team/                        # TeamForm, TeamCard, TeamRoster, InvitePanel
 │   ├── match/                       # MatchForm, StatsEntryForm
-│   ├── editor/                      # CardEditorCanvas, EditorToolbar, panels
+│   ├── editor/                      # EditorToolbar, ContentPanel, DesignBuilder
 │   ├── studio/                      # AI Studio components
 │   ├── print/                       # PrintFormatSelector, CardSelectionGrid
 │   ├── collection/                  # CollectionGrid, CollectionFilters, SeasonAlbum
@@ -261,8 +261,8 @@ src/
 │   ├── firebaseServices.ts          # All Firestore CRUD — only place db is used
 │   ├── utils.ts                     # cn(), getFirebaseErrorMessage(), formatDate(), getRarityColor(), getLevelFromXP()
 │   ├── cardEngine.ts                # Pure business logic: rarity, XP, card generation
-│   ├── cardExport.ts                # Konva PNG export + Storage upload
-│   ├── konvaEffects.ts              # Konva Filter setup for each card effect
+│   ├── cardDesign.ts                # Design system: shapes, frames, palettes, patterns, finishes, presets
+│   ├── cardExport.ts                # html-to-image PNG export + Storage upload
 │   ├── achievementEngine.ts         # checkAchievements() pure function
 │   ├── xpEngine.ts                  # addXP(), getLevelFromXP(), getUnlockables()
 │   ├── printEngine.ts               # jsPDF export functions

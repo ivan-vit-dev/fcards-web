@@ -388,6 +388,58 @@ export async function updateCard(cardId: string, data: Partial<Card>): Promise<v
   });
 }
 
+const MAX_PHOTO_VERSIONS = 12; // mirrored in functions/src/index.ts (finishPhotoJob)
+
+// Client-side photo edits (e.g. crop) join the same history as the AI steps.
+export async function addCardPhotoVersion(
+  cardId: string,
+  url: string,
+  label: string,
+  sourceUrl: string,
+  cutout: boolean
+): Promise<Pick<Card, "photoUrl" | "photoVersions" | "photoCutout">> {
+  const ref = doc(db, "cards", cardId);
+  return runTransaction(db, async (tx) => {
+    const card = (await tx.get(ref)).data() as Card | undefined;
+    const history = card?.photoVersions?.length
+      ? card.photoVersions
+      : [{ url: sourceUrl, label: "Originál", at: Date.now() }];
+    const next = [...history, { url, label, at: Date.now(), cutout }];
+    const photoVersions =
+      next.length > MAX_PHOTO_VERSIONS ? [next[0], ...next.slice(-(MAX_PHOTO_VERSIONS - 1))] : next;
+    const patch = { photoUrl: url, photoVersions, photoCutout: cutout };
+    tx.update(ref, { ...patch, updatedAt: serverTimestamp() });
+    return patch;
+  });
+}
+
+// Drops a failed edit from the history. The original (index 0) can't be removed; if the
+// removed version is on the card, the card falls back to the newest remaining version.
+export async function removeCardPhotoVersion(
+  cardId: string,
+  url: string
+): Promise<Pick<Card, "photoUrl" | "photoVersions" | "photoCutout">> {
+  const ref = doc(db, "cards", cardId);
+  return runTransaction(db, async (tx) => {
+    const card = (await tx.get(ref)).data() as Card | undefined;
+    const versions = card?.photoVersions ?? [];
+    if (versions[0]?.url === url) throw new Error("The original photo can't be removed.");
+    const photoVersions = versions.filter((v) => v.url !== url);
+    const patch: Pick<Card, "photoUrl" | "photoVersions" | "photoCutout"> = { photoVersions };
+    if (card?.photoUrl === url) {
+      const fallback = photoVersions[photoVersions.length - 1];
+      patch.photoUrl = fallback?.url;
+      patch.photoCutout = !!fallback?.cutout;
+    }
+    tx.update(ref, { ...patch, updatedAt: serverTimestamp() });
+    return patch;
+  });
+}
+
+export async function removeCardBackground(cardId: string): Promise<void> {
+  await updateDoc(doc(db, "cards", cardId), updatePayload({ backgroundUrl: undefined }));
+}
+
 export async function deleteCard(cardId: string): Promise<void> {
   await deleteDoc(doc(db, "cards", cardId));
 }

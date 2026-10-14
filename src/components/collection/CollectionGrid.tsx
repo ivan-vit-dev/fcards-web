@@ -3,11 +3,9 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { cn } from "@/lib/utils";
 import type { Card } from "@/types";
 import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
-import { CardHologramEffect } from "./CardHologramEffect";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayersStore } from "@/store/appStore";
 
@@ -58,13 +56,8 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
                   card={card}
                   player={players.find((p) => p.id === card.playerId)}
                   size="md"
-                  className={cn(
-                    "transition-transform duration-200 group-hover:scale-[1.03]",
-                    (card.rarity === "legendary" || card.rarity === "mythic") &&
-                      "shadow-card-legendary"
-                  )}
+                  className="transition-transform duration-200 group-hover:scale-[1.03]"
                 />
-                <CardHologramEffect rarity={card.rarity} effect={card.effect} />
               </div>
               <div className="px-0.5 text-center">
                 <RarityBadge rarity={card.rarity} className="text-[10px]" />

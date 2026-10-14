@@ -189,8 +189,12 @@ export interface Card {
   cardType: CardType;
   rarity: Rarity;
   templateId: string;
-  templateStyle?: string; // Template.category at creation time; see lib/cardTemplates.ts
+  templateStyle?: string; // legacy: template category on cards created before `design`
   photoUrl?: string; // card-specific photo (AI output); falls back to the player's photo
+  backgroundUrl?: string; // AI stadium drawn behind the photo (best with a background-removed photo)
+  photoVersions?: PhotoVersion[]; // AI photo history, written by Cloud Functions; [0] = original
+  photoCutout?: boolean; // current photo has a transparent background (stadium shows behind it)
+  design?: CardDesign; // full look; absent on older cards (see resolveDesign in lib/cardDesign.ts)
   imageUrl?: string; // full rendered card exported from the editor (download/share)
   thumbnailUrl?: string;
   shareSlug: string;
@@ -207,6 +211,44 @@ export interface Card {
   printCount: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface PhotoVersion {
+  url: string;
+  label: string; // e.g. "Originál", "Bez pozadí", "Oslava gólu"
+  at: number; // epoch ms
+  cutout?: boolean; // transparent background
+}
+
+// ─── Card design (see lib/cardDesign.ts for the catalogue) ────────────────────
+
+export type ShapeId = "classic" | "elite" | "shard" | "bevel";
+export type FrameId =
+  | "gold"
+  | "silver"
+  | "bronze"
+  | "chrome"
+  | "black"
+  | "neon"
+  | "ice"
+  | "rosegold"
+  | "team"
+  | "line";
+export type LayoutId = "classic" | "pro" | "sticker" | "fullbleed" | "sidebar" | "minimal";
+/** Face background. */
+export type PatternId = "clean" | "mesh" | "beams" | "facets" | "number" | "lava" | "spiral" | "smoke";
+export type FinishId = "none" | "gloss" | "refractor" | "prizm" | "shimmer" | "goldglint" | "speckle";
+
+export interface CardDesign {
+  shape: ShapeId;
+  frame: FrameId;
+  layout: LayoutId;
+  palette: string; // PALETTES key, or "custom" (uses customColors)
+  customColors?: { primary: string; secondary: string }; // hex, e.g. club colours
+  pattern: PatternId;
+  finish: FinishId;
+  /** Player breaks out of the photo window (needs a background-removed photo). */
+  popOut?: boolean;
 }
 
 // ─── Template ─────────────────────────────────────────────────────────────────

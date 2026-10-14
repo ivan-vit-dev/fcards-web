@@ -67,9 +67,11 @@ interface PlayerFormProps {
   userId: string;
   player?: Player;
   onSubmit: (data: Partial<Player>) => Promise<void>;
+  /** Persists the photo right after upload (edit mode), so it isn't lost without "Save". */
+  onPhotoUpload?: (url: string) => Promise<void>;
 }
 
-export function PlayerForm({ userId, player, onSubmit }: PlayerFormProps) {
+export function PlayerForm({ userId, player, onSubmit, onPhotoUpload }: PlayerFormProps) {
   const [photoURL, setPhotoURL] = useState<string | undefined>(player?.photoURL);
   const [saving, setSaving] = useState(false);
 
@@ -112,6 +114,18 @@ export function PlayerForm({ userId, player, onSubmit }: PlayerFormProps) {
     }
   };
 
+  const handlePhotoUpload = async (url: string) => {
+    setPhotoURL(url);
+    if (!onPhotoUpload) return;
+    try {
+      await onPhotoUpload(url);
+      toast.success("Fotka uložena.");
+    } catch (err) {
+      console.warn("[PlayerForm] photo", err);
+      toast.error("Fotku se nepodařilo uložit. Klikněte prosím na Uložit.");
+    }
+  };
+
   const onInvalid = () => toast.error("Zkontrolujte prosím zvýrazněná pole.");
 
   return (
@@ -121,7 +135,7 @@ export function PlayerForm({ userId, player, onSubmit }: PlayerFormProps) {
           userId={userId}
           currentPhotoURL={photoURL}
           displayName={displayName}
-          onUpload={setPhotoURL}
+          onUpload={handlePhotoUpload}
         />
       </div>
 

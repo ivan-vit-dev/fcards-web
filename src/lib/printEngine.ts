@@ -118,9 +118,28 @@ function drawCutMark(doc: jsPDF, x: number, y: number, size = 3): void {
   doc.line(x, y + 0.5, x, y + size);
 }
 
+/** Card outline as fractions (0–1) of the card box — see shapeOutline in lib/cardDesign.ts. */
+export interface CardOutline {
+  points?: [number, number][];
+  radius?: number; // fraction of card width
+}
+
+// Thin grey cut line along the card's real shape (shields, hexagons… are not rectangles).
+function drawOutline(doc: jsPDF, outline: CardOutline, x: number, y: number, w: number, h: number): void {
+  doc.setDrawColor(170, 170, 170);
+  doc.setLineWidth(0.15);
+  if (outline.points && outline.points.length > 2) {
+    const pts = outline.points.map(([px, py]) => [x + px * w, y + py * h] as const);
+    const deltas = pts.slice(1).map(([px, py], i) => [px - pts[i][0], py - pts[i][1]]);
+    doc.lines(deltas, pts[0][0], pts[0][1], [1, 1], "S", true);
+  } else if (outline.radius) {
+    doc.roundedRect(x, y, w, h, outline.radius * w, outline.radius * w, "S");
+  }
+}
+
 // Lays out already-rendered card images (PNG data URLs, see CardPreview + html-to-image)
-// so printed cards look exactly like the on-screen ones, template included.
-export function exportCardsToPDF(images: string[], format: PrintFormat): void {
+// so printed cards look exactly like the on-screen ones, design included.
+export function exportCardsToPDF(images: string[], format: PrintFormat, outlines: CardOutline[] = []): void {
   const layout = LAYOUTS[format];
 
   const doc = new jsPDF({
@@ -144,6 +163,8 @@ export function exportCardsToPDF(images: string[], format: PrintFormat): void {
       const y = layout.marginY + row * (layout.cardH + layout.gapY);
 
       doc.addImage(dataUrl, "PNG", x, y, layout.cardW, layout.cardH);
+      const outline = outlines[page * slots + i];
+      if (outline) drawOutline(doc, outline, x, y, layout.cardW, layout.cardH);
 
       if (layout.cutMarks) {
         drawCutMark(doc, x, y);

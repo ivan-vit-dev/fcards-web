@@ -3,13 +3,18 @@
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Card, Player, CardStats } from "@/types";
+import { RarityBadge } from "@/components/card/RarityBadge";
+import { cn } from "@/lib/utils";
+import type { Card, Player, CardStats, Rarity } from "@/types";
+
+const RARITIES: Rarity[] = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "limited"];
 
 interface ContentPanelProps {
   card: Card;
   player: Player | null;
   onUpdateStat: (key: keyof CardStats, value: number) => void;
   onUpdateSeason: (season: string) => void;
+  onUpdateRarity: (rarity: Rarity) => void;
 }
 
 export function ContentPanel({
@@ -17,6 +22,7 @@ export function ContentPanel({
   player,
   onUpdateStat,
   onUpdateSeason,
+  onUpdateRarity,
 }: ContentPanelProps) {
   const t = useTranslations("editor");
 
@@ -40,6 +46,31 @@ export function ContentPanel({
           </p>
         </div>
       )}
+
+      {/* Rarity */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+          {t("rarity")}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {RARITIES.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => onUpdateRarity(r)}
+              aria-pressed={card.rarity === r}
+              className={cn(
+                "transition-all rounded-md",
+                card.rarity === r
+                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                  : "opacity-60 hover:opacity-100"
+              )}
+            >
+              <RarityBadge rarity={r} />
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Season */}
       <div className="space-y-1.5">

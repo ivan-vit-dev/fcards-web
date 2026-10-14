@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { cn } from "@/lib/utils";
 import type { Card } from "@/types";
 import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
-import { CardHologramEffect } from "./CardHologramEffect";
 import { BookOpen } from "lucide-react";
 import { usePlayersStore } from "@/store/appStore";
 
@@ -58,13 +56,8 @@ export function SeasonAlbum({ cards }: Props) {
                         card={card}
                         player={players.find((p) => p.id === card.playerId)}
                         size="sm"
-                        className={cn(
-                          "transition-transform duration-200 group-hover:scale-[1.04]",
-                          (card.rarity === "legendary" || card.rarity === "mythic") &&
-                            "shadow-card-legendary"
-                        )}
+                        className="transition-transform duration-200 group-hover:scale-[1.04]"
                       />
-                      <CardHologramEffect rarity={card.rarity} effect={card.effect} />
                     </div>
                     <div className="flex justify-center">
                       <RarityBadge rarity={card.rarity} className="text-[9px] px-1 py-0" />

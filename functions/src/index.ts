@@ -1,9 +1,11 @@
 import * as admin from "firebase-admin";
 import { getDownloadURL } from "firebase-admin/storage";
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
+import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import Replicate from "replicate";
+import sharp from "sharp";
 import Anthropic from "@anthropic-ai/sdk";
 
 admin.initializeApp();
@@ -17,7 +19,8 @@ setGlobalOptions({ region: "europe-west1", timeoutSeconds: 300 });
 const REPLICATE_API_KEY = defineSecret("REPLICATE_API_KEY");
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 
-const replicateOpts = { secrets: [REPLICATE_API_KEY] };
+// Replicate cold starts can take well over the 60 s default.
+const replicateOpts = { secrets: [REPLICATE_API_KEY], timeoutSeconds: 300, memory: "512MiB" as const };
 const getReplicate = () => new Replicate({ auth: REPLICATE_API_KEY.value() });
 
 // Keep in sync with TIER_LIMITS in src/lib/subscriptionEngine.ts (-1 = unlimited).
@@ -33,12 +36,15 @@ const AI_CREDITS_PER_MONTH: Record<string, number> = {
 interface CardDoc {
   userId: string;
   playerId: string;
+  photoUrl?: string;
+  photoCutout?: boolean;
   cardStats?: { goals?: number; assists?: number; rating?: number; overall?: number };
 }
 
 interface PlayerDoc {
   displayName?: string;
   position?: string;
+  photoURL?: string;
 }
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
@@ -112,7 +118,8 @@ async function finishJob(cardId: string, result: Record<string, unknown>): Promi
 
 // Marks the card as failed and refunds the credit startJob consumed.
 async function failJob(uid: string, cardId: string, err: unknown, message: string): Promise<never> {
-  console.error(message, err);
+  // Log only the message: SDK errors (e.g. Replicate ApiError) carry the request incl. the API key.
+  console.error(message, err instanceof Error ? err.message : String(err));
   const userRef = db.doc(`users/${uid}`);
   await db.runTransaction(async (tx) => {
     const user = (await tx.get(userRef)).data() ?? {};
@@ -124,7 +131,9 @@ async function failJob(uid: string, cardId: string, err: unknown, message: strin
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
-  throw new HttpsError("internal", message);
+  // 402 = the Replicate account is out of credit — a platform problem, not the user's.
+  const outOfCredit = err instanceof Error && err.message.includes("402");
+  throw new HttpsError(outOfCredit ? "unavailable" : "internal", message);
 }
 
 async function getPlayer(uid: string, playerId: string): Promise<PlayerDoc> {
@@ -133,20 +142,93 @@ async function getPlayer(uid: string, playerId: string): Promise<PlayerDoc> {
 }
 
 // Runs a Replicate image model, copies the result into Storage, returns its download URL.
+// Official models (e.g. FLUX Kontext) run by name; community models need a pinned version.
 async function runImageModel(
   cardId: string,
-  filename: string,
-  model: `${string}/${string}:${string}`,
-  input: Record<string, unknown>
+  name: string,
+  model: `${string}/${string}` | `${string}/${string}:${string}`,
+  input: Record<string, unknown>,
+  postProcess?: (png: Buffer) => Promise<Buffer>
 ): Promise<string> {
   const output = await getReplicate().run(model, { input });
   const first = Array.isArray(output) ? output[0] : output;
   const res = await fetch(String(first));
   if (!res.ok) throw new Error(`Fetching model output failed: ${res.status}`);
 
-  const file = storage.bucket().file(`cards/${cardId}/${filename}`);
-  await file.save(Buffer.from(await res.arrayBuffer()), { contentType: "image/png" });
+  let data: Buffer = Buffer.from(await res.arrayBuffer());
+  let contentType = res.headers.get("content-type") ?? "image/png";
+  if (postProcess) {
+    data = await postProcess(data);
+    contentType = "image/png";
+  }
+
+  // Unique name per run: overwriting a file would invalidate URLs kept in the photo history.
+  const ext = contentType.includes("jpeg") ? "jpg" : "png";
+  const file = storage.bucket().file(`cards/${cardId}/${name}-${Date.now()}.${ext}`);
+  await file.save(data, { contentType });
   return getDownloadURL(file);
+}
+
+// Softens a cut-out's hard edges so they blend into whatever sits behind (stadium, card art).
+// The alpha is blurred and only allowed to decrease, so the edge feathers inward and never
+// reveals pixels outside the mask. Already semi-transparent pixels (matted hair) are left
+// alone — blurring them would thin out the strands.
+async function featherEdges(png: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  const alpha = Buffer.alloc(width * height);
+  for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3];
+
+  const sigma = Math.max(1.2, Math.min(width, height) / 300);
+  // sharp widens single-channel images to sRGB on output, so take channel 0 back out.
+  const blurred = await sharp(alpha, { raw: { width, height, channels: 1 } })
+    .blur(sigma)
+    .extractChannel(0)
+    .raw()
+    .toBuffer();
+  for (let i = 0; i < alpha.length; i++) {
+    if (alpha[i] === 255) data[i * 4 + 3] = Math.min(255, blurred[i]);
+  }
+
+  return sharp(data, { raw: { width, height, channels: 4 } }).png().toBuffer();
+}
+
+const MAX_PHOTO_VERSIONS = 12;
+
+interface PhotoVersion {
+  url: string;
+  label: string;
+  at: number;
+  cutout?: boolean;
+}
+
+// Sets the new card photo and appends it to the card's photo history (the original is kept
+// as the first entry), so every AI step can be undone from the Studio. `cutout` records whether
+// the photo has a transparent background (needed for the stadium behind the player).
+async function finishPhotoJob(
+  cardId: string,
+  url: string,
+  label: string,
+  sourceUrl: string,
+  cutout = false
+): Promise<void> {
+  const cardRef = db.doc(`cards/${cardId}`);
+  await db.runTransaction(async (tx) => {
+    const card = (await tx.get(cardRef)).data() ?? {};
+    const history: PhotoVersion[] = card.photoVersions?.length
+      ? card.photoVersions
+      : [{ url: sourceUrl, label: "Originál", at: Date.now() }];
+    const next = [...history, { url, label, at: Date.now(), cutout }];
+    // Keep the original plus the most recent edits.
+    const trimmed = next.length > MAX_PHOTO_VERSIONS ? [next[0], ...next.slice(-(MAX_PHOTO_VERSIONS - 1))] : next;
+    tx.update(cardRef, {
+      photoUrl: url,
+      photoVersions: trimmed,
+      photoCutout: cutout,
+      aiStatus: "done",
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
 }
 
 // ─── removeBackground ─────────────────────────────────────────────────────────
@@ -158,18 +240,26 @@ export const removeBackground = onCall(replicateOpts, async (request) => {
 
   await startJob(uid, cardId, false);
   try {
-    const url = await runImageModel(
-      cardId,
-      "bg-removed.png",
-      "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285d65c14638cc5f36f34befaf1",
-      { image: imageUrl }
-    );
-    await finishJob(cardId, { photoUrl: url });
+    const url = await cutOutPhoto(cardId, imageUrl);
     return { imageUrl: url };
   } catch (err) {
     return failJob(uid, cardId, err, "Background removal failed.");
   }
 });
+
+async function cutOutPhoto(cardId: string, imageUrl: string): Promise<string> {
+  // Bria RMBG 2.0 mattes hair with partial alpha (strands blend instead of keeping
+  // background pockets between them, as the older U2Net-based model did).
+  const url = await runImageModel(
+    cardId,
+    "bg-removed",
+    "bria/remove-background:5ecc270b34e9d8e1f007d9dbd3c724f0badf638f05ffaa0c5e0634ed64d3d378",
+    { image_url: imageUrl, preserve_alpha: true, preserve_partial_alpha: true },
+    featherEdges
+  );
+  await finishPhotoJob(cardId, url, "Bez pozadí", imageUrl, true);
+  return url;
+}
 
 // ─── enhanceFace ──────────────────────────────────────────────────────────────
 
@@ -180,52 +270,89 @@ export const enhanceFace = onCall(replicateOpts, async (request) => {
 
   await startJob(uid, cardId, true);
   try {
+    // CodeFormer: sharper, more natural faces than GFPGAN. Fidelity 0.7 keeps the child's real
+    // features instead of "beautifying" them.
     const url = await runImageModel(
       cardId,
-      "enhanced.png",
-      "tencentarc/gfpgan:9283608cc6b7be6b65a8e44983db012355fde4132009bf99d976b2f0896856a3",
-      { img: imageUrl, version: "v1.4", scale: 2 }
+      "enhanced",
+      "sczhou/codeformer:cc4956dd26fa5a7185d5660cc9100fab1b8070a1d1654a8bb5eb6d443b020bb2",
+      { image: imageUrl, codeformer_fidelity: 0.7, upscale: 2, face_upsample: true, background_enhance: true }
     );
-    await finishJob(cardId, { photoUrl: url });
+    await finishPhotoJob(cardId, url, "Vylepšená tvář", imageUrl);
     return { imageUrl: url };
   } catch (err) {
     return failJob(uid, cardId, err, "Face enhancement failed.");
   }
 });
 
-// ─── generateActionPose ───────────────────────────────────────────────────────
+// ─── editPhoto: poses, emotions and styles with Google Nano Banana ───────────
+// Nano Banana (Gemini 2.5 Flash Image) edits the given photo from an instruction and keeps the
+// person recognisable far better than FLUX Kontext Pro, which visibly changed children's faces.
+// Clients pick an option id; prompts live only here, so no free-form text reaches the model.
 
-const POSE_PROMPTS: Record<string, string> = {
-  goalkeeper: "goalkeeper diving save dramatic action pose",
-  defender: "defender tackle action pose football",
-  midfielder: "midfielder dribbling ball action pose football",
-  forward: "striker scoring goal celebration action pose football",
+const KEEP_IDENTITY =
+  "The child must stay clearly recognisable as the very same person: do not change the face shape, eyes, nose, mouth shape, ears, eyebrows, skin tone, hairstyle or age. Keep the same football kit with the same colours and number.";
+
+const EDIT_OPTIONS: Record<"pose" | "emotion" | "style", Record<string, { label: string; prompt: string }>> = {
+  pose: {
+    celebrate: { label: "Oslava gólu", prompt: "Change the pose: the player celebrates a goal with both arms raised high above the head." },
+    fist: { label: "Vítězná pěst", prompt: "Change the pose: the player pumps one fist in celebration, full of energy." },
+    arms_crossed: { label: "Založené ruce", prompt: "Change the pose: the player stands confidently with arms crossed over the chest." },
+    thumbs_up: { label: "Palec nahoru", prompt: "Change the pose: the player gives a thumbs up toward the camera with one hand." },
+    point: { label: "Ukazuje na tebe", prompt: "Change the pose: the player points straight at the camera with one hand." },
+    heart: { label: "Srdíčko", prompt: "Change the pose: the player makes a heart shape with both hands in front of the chest." },
+    ball: { label: "Míč v ruce", prompt: "Change the pose: the player holds a football under one arm." },
+    trophy: { label: "S pohárem", prompt: "Change the pose: the player lifts a shiny golden trophy above the head." },
+    kick: { label: "Kop do míče", prompt: "Change the pose: the player is in a dynamic action pose about to kick a football." },
+  },
+  emotion: {
+    smile: { label: "Úsměv", prompt: "Change only the facial expression to a big, natural, happy smile." },
+    focused: { label: "Odhodlání", prompt: "Change only the facial expression to a focused, determined game face." },
+    joy: { label: "Radost z gólu", prompt: "Change only the facial expression to shouting with joy, mouth open in celebration." },
+    cool: { label: "V pohodě", prompt: "Change only the facial expression to a confident, cool half-smile." },
+    wink: { label: "Mrknutí", prompt: "Change only the facial expression to a cheeky wink with a smile." },
+  },
+  style: {
+    fifa: { label: "Herní karta", prompt: "Restyle the photo as a glossy video-game football card portrait with dramatic studio rim lighting." },
+    panini: { label: "Retro 90. léta", prompt: "Restyle the photo as a 1990s football sticker photo with warm film colours and soft grain." },
+    comic: { label: "Komiks", prompt: "Restyle the photo as a bold comic book illustration with clean ink outlines and vivid flat colours." },
+    anime: { label: "Anime", prompt: "Restyle the photo as an anime illustration with clean lines and bright colours." },
+    cartoon: { label: "3D animák", prompt: "Restyle the photo as a 3D animated movie character render with soft lighting." },
+    fantasy: { label: "Malba", prompt: "Restyle the photo as an epic digital painting with dramatic light." },
+    superhero: { label: "Superhrdina", prompt: "Restyle the photo as a superhero comic cover with a glowing heroic aura, keeping the football kit." },
+  },
 };
 
-export const generateActionPose = onCall(replicateOpts, async (request) => {
+// Poses and emotions are paid features; styles keep the old split (fifa/panini/comic free).
+const FREE_STYLES = new Set(["fifa", "panini", "comic"]);
+
+export const editPhoto = onCall(replicateOpts, async (request) => {
   const uid = requireAuth(request);
   const cardId = requireString(request.data?.cardId, "cardId");
+  const imageUrl = requireImageUrl(request.data?.imageUrl);
+  const kind = requireString(request.data?.kind, "kind") as keyof typeof EDIT_OPTIONS;
+  const optionId = requireString(request.data?.option, "option");
+  const option = EDIT_OPTIONS[kind]?.[optionId];
+  if (!option) throw new HttpsError("invalid-argument", "Unknown edit option.");
 
-  const card = await startJob(uid, cardId, true);
+  const premium = !(kind === "style" && FREE_STYLES.has(optionId));
+  await startJob(uid, cardId, premium);
   try {
-    const player = await getPlayer(uid, card.playerId);
-    const pose = POSE_PROMPTS[player.position ?? ""] ?? "football action pose";
-    const url = await runImageModel(
-      cardId,
-      "action-pose.png",
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-      {
-        prompt: `Young football player, ${pose}, stadium background, dramatic lighting, photorealistic, 8k`,
-        negative_prompt: "blurry, low quality, cartoon, anime",
-        width: 768,
-        height: 1024,
-        num_inference_steps: 30,
-      }
-    );
-    await finishJob(cardId, { photoUrl: url });
+    const prompt =
+      kind === "style"
+        ? `Edit this photo. ${option.prompt} Keep the same child recognisable: same face shape, hairstyle, kit colours and pose.`
+        : `Edit this photo. ${option.prompt} ${KEEP_IDENTITY} Keep it a photorealistic sports photo with the same lighting, framing and background.`;
+    const url = await runImageModel(cardId, `${kind}-${optionId}`, "google/nano-banana", {
+      prompt,
+      image_input: [imageUrl],
+      aspect_ratio: "match_input_image",
+      output_format: "png",
+    });
+    await finishPhotoJob(cardId, url, option.label, imageUrl);
+    if (kind === "style") await db.doc(`cards/${cardId}`).update({ aiStyle: optionId });
     return { imageUrl: url };
   } catch (err) {
-    return failJob(uid, cardId, err, "Action pose generation failed.");
+    return failJob(uid, cardId, err, "Photo edit failed.");
   }
 });
 
@@ -243,21 +370,27 @@ export const generateStadium = onCall(replicateOpts, async (request) => {
   const cardId = requireString(request.data?.cardId, "cardId");
   const style = STADIUM_PROMPTS[request.data?.stadiumStyle] ? request.data.stadiumStyle : "night";
 
-  await startJob(uid, cardId, true);
+  const card = await startJob(uid, cardId, true);
   try {
+    // The stadium sits behind the player, so an opaque photo would hide it completely:
+    // cut the player out first (part of the same job, no extra credit).
+    const photo = card.photoUrl ?? (await getPlayer(uid, card.playerId)).photoURL;
+    if (photo && !card.photoCutout) await cutOutPhoto(cardId, photo);
+
     const url = await runImageModel(
       cardId,
-      "stadium.png",
+      "stadium",
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         prompt: `${STADIUM_PROMPTS[style]}, ultra wide angle, professional photography, 8k, epic atmosphere`,
-        negative_prompt: "people in foreground, blurry, low quality",
-        width: 1024,
-        height: 768,
+        negative_prompt: "people in foreground, players, blurry, low quality",
+        // Portrait to match the card's photo area, which it sits behind.
+        width: 768,
+        height: 1024,
         num_inference_steps: 30,
       }
     );
-    await finishJob(cardId, { photoUrl: url });
+    await finishJob(cardId, { backgroundUrl: url });
     return { imageUrl: url };
   } catch (err) {
     return failJob(uid, cardId, err, "Stadium generation failed.");
@@ -432,44 +565,16 @@ export const syncProgress = onCall(async (request) => {
   });
 });
 
-// ─── applyAIStyle ─────────────────────────────────────────────────────────────
+// ─── Storage cleanup ──────────────────────────────────────────────────────────
+// Deleting a card removes its images: AI outputs and stadiums under cards/{id}/ and the
+// Studio crops the browser uploaded to users/{uid}/photos/crop-{id}-*.
 
-const STYLE_PROMPTS: Record<string, string> = {
-  fifa: "FIFA Ultimate Team card style, professional football trading card, premium design, gold border",
-  panini: "Panini sticker style, retro football card, soft colors, classic design",
-  comic: "comic book style, bold outlines, vibrant colors, dynamic action",
-  anime: "anime style, manga art, expressive, dynamic lines, Japanese art",
-  cartoon: "cartoon style, fun colorful, child-friendly, bright cheerful",
-  fantasy: "fantasy art style, epic magical, dramatic lighting, painterly",
-  superhero: "superhero comic style, Marvel DC art, dynamic pose, cape, dramatic lighting",
-};
-const PREMIUM_STYLES = new Set(["anime", "cartoon", "fantasy", "superhero"]);
-
-export const applyAIStyle = onCall(replicateOpts, async (request) => {
-  const uid = requireAuth(request);
-  const cardId = requireString(request.data?.cardId, "cardId");
-  const imageUrl = requireImageUrl(request.data?.imageUrl);
-  const style = requireString(request.data?.style, "style");
-  if (!STYLE_PROMPTS[style]) throw new HttpsError("invalid-argument", "Unknown style.");
-
-  await startJob(uid, cardId, PREMIUM_STYLES.has(style));
-  try {
-    const url = await runImageModel(
-      cardId,
-      "styled.png",
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-      {
-        prompt: `${STYLE_PROMPTS[style]}, high quality, detailed`,
-        image: imageUrl,
-        prompt_strength: 0.7,
-        num_inference_steps: 30,
-        width: 768,
-        height: 1024,
-      }
-    );
-    await finishJob(cardId, { photoUrl: url, aiStyle: style });
-    return { imageUrl: url };
-  } catch (err) {
-    return failJob(uid, cardId, err, "Style transfer failed.");
-  }
+export const onCardDeleted = onDocumentDeleted("cards/{cardId}", async (event) => {
+  const cardId = event.params.cardId;
+  const userId = event.data?.get("userId") as string | undefined;
+  const bucket = storage.bucket();
+  await Promise.all([
+    bucket.deleteFiles({ prefix: `cards/${cardId}/` }),
+    userId ? bucket.deleteFiles({ prefix: `users/${userId}/photos/crop-${cardId}-` }) : Promise.resolve(),
+  ]);
 });

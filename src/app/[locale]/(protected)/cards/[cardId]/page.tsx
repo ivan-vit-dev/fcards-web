@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -12,9 +12,13 @@ import {
   Globe,
   Lock,
   Sparkles,
+  Download,
+  Loader2,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +28,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
@@ -37,8 +40,25 @@ import {
   getPlayerDoc,
 } from "@/lib/firebaseServices";
 import { CARD_TYPE_LABELS } from "@/lib/cardEngine";
+import { useShare } from "@/hooks/use-share";
 import type { Card, Player } from "@/types";
 import toast from "react-hot-toast";
+
+function DownloadCardButton({ card, captureNode }: { card: Card; captureNode: () => HTMLElement | null }) {
+  const { share, sharing } = useShare({ card, captureNode });
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-1.5"
+      disabled={sharing}
+      onClick={() => share("download")}
+    >
+      {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+      Stáhnout PNG
+    </Button>
+  );
+}
 
 export default function CardDetailPage() {
   const { user } = useAuthStore();
@@ -56,17 +76,20 @@ export default function CardDetailPage() {
     card ? (players.find((p) => p.id === card.playerId) ?? null) : null
   );
   const [loading, setLoading] = useState(!card);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user || !cardId) return;
-    if (card && player) return;
-    getCardDoc(cardId).then(async (c) => {
-      if (!c) { setLoading(false); return; }
-      setCard(c);
-      const p = await getPlayerDoc(user.uid, c.playerId);
-      setPlayer(p);
-      setLoading(false);
-    });
+    // Always refetch: the store copy may predate e.g. a newly uploaded player photo.
+    getCardDoc(cardId)
+      .then(async (c) => {
+        if (!c) return;
+        setCard(c);
+        setPlayer(await getPlayerDoc(user.uid, c.playerId));
+      })
+      .catch((err) => console.warn("[CardDetail]", err))
+      .finally(() => setLoading(false));
   }, [user, cardId]);
 
   const handleTogglePublic = async () => {
@@ -80,10 +103,15 @@ export default function CardDetailPage() {
 
   const handleDelete = async () => {
     if (!card) return;
-    await deleteCard(card.id);
-    removeCard(card.id);
-    toast.success("Kartička smazána.");
-    router.push(`/${locale}/cards`);
+    try {
+      await deleteCard(card.id);
+      removeCard(card.id);
+      toast.success("Kartička smazána.");
+      router.push(`/${locale}/cards`);
+    } catch (err) {
+      console.warn("[CardDetail] delete", err);
+      toast.error("Kartičku se nepodařilo smazat.");
+    }
   };
 
   const handleShare = async () => {
@@ -176,23 +204,22 @@ export default function CardDetailPage() {
               <Pencil className="h-4 w-4" />
             </Button>
           </Link>
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              }
-            />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+            title="Smazat kartičku"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Smazat kartičku?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Tato akce je nevratná. Kartička bude trvale smazána.
+                  Kartička se trvale smaže včetně všech AI úprav fotky, příběhu a sdíleného odkazu.
+                  Hráč ani jeho fotka v profilu se nesmažou. Tuto akci nelze vrátit.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -201,7 +228,7 @@ export default function CardDetailPage() {
                   onClick={handleDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Smazat
+                  Smazat kartičku
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -211,12 +238,20 @@ export default function CardDetailPage() {
 
       {/* Card display + meta */}
       <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-        <CardPreview
-          card={card}
-          player={player ?? undefined}
-          size="lg"
-          className="shrink-0"
-        />
+        <div className="shrink-0 flex flex-col items-center gap-3">
+          <div ref={cardRef} className="inline-block">
+            <CardPreview card={card} player={player ?? undefined} size="lg" interactive />
+          </div>
+          <div className="flex gap-2">
+            <DownloadCardButton card={card} captureNode={() => cardRef.current} />
+            <Link href={`/${locale}/print?cardId=${card.id}`}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Printer className="h-3.5 w-3.5" />
+                Tisk
+              </Button>
+            </Link>
+          </div>
+        </div>
 
         <div className="space-y-4 flex-1 w-full">
           <div className="space-y-2">
@@ -277,8 +312,7 @@ export default function CardDetailPage() {
           </div>
 
           {/* Visibility toggle */}
-          <button
-            onClick={handleTogglePublic}
+          <div
             className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-colors ${
               card.isPublic
                 ? "border-primary/30 bg-primary/5"
@@ -290,17 +324,37 @@ export default function CardDetailPage() {
             ) : (
               <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
-            <div className="text-left">
-              <p className="text-sm font-medium">
-                {card.isPublic ? "Veřejná kartička" : "Soukromá kartička"}
-              </p>
+            <div className="text-left flex-1">
+              <label htmlFor="card-public" className="text-sm font-medium">Zveřejnit kartičku</label>
               <p className="text-xs text-muted-foreground">
                 {card.isPublic
-                  ? "Kartička je dostupná přes sdílený odkaz"
-                  : "Pouze vy vidíte tuto kartičku"}
+                  ? "Zapnuto — kartička je dostupná přes sdílený odkaz."
+                  : "Vypnuto — kartičku vidíte jen vy. Zapněte pro sdílení odkazem."}
               </p>
             </div>
-          </button>
+            <Switch id="card-public" checked={card.isPublic} onCheckedChange={handleTogglePublic} />
+          </div>
+
+          {card.isPublic && (
+            <Link href={`/${locale}/card/${card.shareSlug}`} target="_blank" className="block">
+              <Button variant="outline" size="sm" className="w-full gap-1.5">
+                <ExternalLink className="h-3.5 w-3.5" />
+                Otevřít veřejnou stránku
+              </Button>
+            </Link>
+          )}
+
+          <div className="pt-2 border-t border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+              className="w-full gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Smazat kartičku
+            </Button>
+          </div>
         </div>
       </div>
     </div>

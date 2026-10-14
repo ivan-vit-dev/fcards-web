@@ -288,4 +288,23 @@
   /* Card animations */
   .animate-card-reveal { animation: var(--animate-card-reveal); }
   .animate-shimmer { animation: var(--animate-shimmer); }
+
+  /* Cards: finishes follow --gx/--gy (pointer on interactive cards, a fixed sweep on hover otherwise);
+     interactive cards also tilt by --rx/--ry. Registered below so they animate. */
+  .card-design {
+    transition: --gx 0.7s ease, --gy 0.7s ease, --rx 0.6s ease, --ry 0.6s ease, --glare 0.4s ease;
+  }
+  .card-design[data-tilting] {
+    transition-duration: 0.08s;
+  }
+  .card-design:not([data-interactive]):hover {
+    --gx: 90%;
+    --gy: 80%;
+  }
 }
+
+@property --gx { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+@property --gy { syntax: "<percentage>"; inherits: true; initial-value: 20%; }
+@property --rx { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --ry { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --glare { syntax: "<number>"; inherits: true; initial-value: 0; }

@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Check, ChevronRight, Loader2, Lock } from "lucide-react";
+import { AlertCircle, Check, ChevronRight, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CardPreview } from "./CardPreview";
+import { DesignGallery } from "./DesignGallery";
 import { RarityBadge } from "./RarityBadge";
+import { DEFAULT_PRESET, PRESETS, type Preset } from "@/lib/cardDesign";
 import {
   computeDefaultRarity,
   buildCardStats,
@@ -17,14 +19,13 @@ import {
   CARD_TYPE_LABELS,
   CARD_TYPE_DESCRIPTIONS,
 } from "@/lib/cardEngine";
-import { TIER_LABELS, tierAtLeast } from "@/lib/subscriptionEngine";
+import { tierAtLeast } from "@/lib/subscriptionEngine";
 import { getPlayerMatchStats } from "@/lib/firebaseServices";
 import { currentSeason, validateSeason } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import type {
   Player,
   Match,
-  Template,
   Card,
   CardType,
   Rarity,
@@ -33,14 +34,13 @@ import type {
 } from "@/types";
 import toast from "react-hot-toast";
 
-const STEPS = ["Hráč", "Typ", "Šablona", "Obsah", "Náhled"] as const;
+const STEPS = ["Hráč", "Typ", "Vzhled", "Obsah", "Náhled"] as const;
 
 interface WizardData {
   playerId: string;
   player: Player | null;
   cardType: CardType;
-  templateId: string;
-  template: Template | null;
+  preset: Preset | null;
   matchId?: string;
   matchStats?: PlayerMatchStats | null;
   season: string;
@@ -53,7 +53,6 @@ interface CardGeneratorWizardProps {
   locale: string;
   players: Player[];
   matches: Match[];
-  templates: Template[];
   onGenerate: (draft: Partial<Card>) => Promise<void>;
 }
 
@@ -269,10 +268,9 @@ function StepCardType({
   );
 }
 
-// ─── Step 3: Template ─────────────────────────────────────────────────────────
+// ─── Step 3: Look ─────────────────────────────────────────────────────────────
 
-function StepTemplate({
-  templates,
+function StepDesign({
   selectedId,
   isAllowed,
   locale,
@@ -280,74 +278,29 @@ function StepTemplate({
   player,
   onSelect,
 }: {
-  templates: Template[];
   selectedId: string;
-  isAllowed: (t: Template) => boolean;
+  isAllowed: (p: Preset) => boolean;
   locale: string;
   sampleCard: Card;
   player: Player | null;
-  onSelect: (t: Template) => void;
+  onSelect: (p: Preset) => void;
 }) {
   return (
     <div className="space-y-4">
-      <StepHeader title="Šablona" description="Vyberte vzhled kartičky." />
-      {templates.length === 0 ? (
-        <Notice tone="error">
-          Zatím nejsou dostupné žádné šablony. Administrátor je nahraje v sekci Administrace →
-          „Nahrát výchozí data“.
-        </Notice>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {templates.map((tpl) => {
-            const allowed = isAllowed(tpl);
-            const selected = selectedId === tpl.id;
-            return (
-              <button
-                key={tpl.id}
-                type="button"
-                onClick={() => allowed && onSelect(tpl)}
-                disabled={!allowed}
-                aria-pressed={selected}
-                className={cn(
-                  "relative rounded-xl overflow-hidden border-2 text-left transition-colors",
-                  selected ? "border-primary" : "border-border",
-                  allowed ? "hover:border-primary/50" : "cursor-not-allowed"
-                )}
-              >
-                <div className="flex justify-center bg-muted/40 py-3">
-                  <CardPreview
-                    card={sampleCard}
-                    player={player ?? undefined}
-                    template={tpl}
-                    size="sm"
-                  />
-                </div>
-                {selected && (
-                  <span className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                )}
-                {!allowed && (
-                  <span className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                    <Lock className="h-5 w-5 text-muted-foreground" />
-                  </span>
-                )}
-                <div className="p-2">
-                  <p className="text-xs font-medium truncate">{tpl.nameCs}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {tpl.requiredTier === "free"
-                      ? "Zdarma"
-                      : `Od tarifu ${TIER_LABELS[tpl.requiredTier]}`}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {templates.some((t) => !isAllowed(t)) && (
+      <StepHeader
+        title="Vzhled"
+        description="Vyberte vzhled kartičky. Tvar, rám, barvy i povrch pak doladíte v editoru."
+      />
+      <DesignGallery
+        card={sampleCard}
+        player={player ?? undefined}
+        selectedId={selectedId}
+        canUse={isAllowed}
+        onSelect={onSelect}
+      />
+      {PRESETS.some((p) => !isAllowed(p)) && (
         <p className="text-xs text-muted-foreground">
-          Zamčené šablony odemknete vyšším tarifem v{" "}
+          Zamčené vzhledy odemknete vyšším tarifem v{" "}
           <Link href={`/${locale}/settings/subscription`} className="text-primary hover:underline">
             nastavení předplatného
           </Link>
@@ -548,8 +501,8 @@ function StepPreview({ data, generating }: { data: WizardData; generating: boole
   const draftCard: Partial<Card> = {
     cardType: data.cardType,
     rarity: data.rarity,
-    templateId: data.templateId,
-    templateStyle: data.template?.category,
+    templateId: data.preset?.id,
+    design: data.preset?.design,
     season: data.season.trim(),
     matchId: data.matchId,
     cardStats: buildCardStats(data.cardType, data.player, data.matchStats),
@@ -563,7 +516,7 @@ function StepPreview({ data, generating }: { data: WizardData; generating: boole
   const rows = [
     { label: "Hráč", value: `${data.player.displayName} · ${positionLabels[data.player.position] ?? ""}` },
     { label: "Typ", value: CARD_TYPE_LABELS[data.cardType] },
-    { label: "Šablona", value: data.template?.nameCs ?? "—" },
+    { label: "Vzhled", value: data.preset?.nameCs ?? "—" },
     { label: "Sezóna", value: data.season.trim() },
   ];
 
@@ -575,12 +528,7 @@ function StepPreview({ data, generating }: { data: WizardData; generating: boole
       />
 
       <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-        <CardPreview
-          card={draftCard as Card}
-          player={data.player}
-          template={data.template ?? undefined}
-          size="lg"
-        />
+        <CardPreview card={draftCard as Card} player={data.player} size="lg" />
 
         <div className="space-y-4 flex-1 w-full">
           <dl className="space-y-3">
@@ -642,11 +590,9 @@ export function CardGeneratorWizard({
   locale,
   players,
   matches,
-  templates,
   onGenerate,
 }: CardGeneratorWizardProps) {
-  const isTemplateAllowed = (t: Template) => isAdmin || tierAtLeast(userTier, t.requiredTier);
-  const defaultTemplate = templates.find(isTemplateAllowed) ?? null;
+  const isPresetAllowed = (p: Preset) => isAdmin || tierAtLeast(userTier, p.requiredTier);
 
   const [step, setStep] = useState(0);
   const [showErrors, setShowErrors] = useState(false);
@@ -656,8 +602,7 @@ export function CardGeneratorWizard({
     playerId: "",
     player: null,
     cardType: "match",
-    templateId: defaultTemplate?.id ?? "",
-    template: defaultTemplate,
+    preset: DEFAULT_PRESET,
     season: currentSeason(),
     rarity: "common",
   });
@@ -669,10 +614,7 @@ export function CardGeneratorWizard({
   // Returns the first problem that blocks leaving the given step, in plain Czech.
   const stepError = (s: number): string | null => {
     if (s === 0 && !data.player) return "Vyberte hráče, pro kterého kartičku vytváříte.";
-    if (s === 2) {
-      if (templates.length === 0) return "Bez šablony nelze kartičku vytvořit.";
-      if (!data.template) return "Vyberte šablonu kartičky.";
-    }
+    if (s === 2 && !data.preset) return "Vyberte vzhled kartičky.";
     if (s === 3) {
       if (seasonError) return seasonError;
       if (loadingStats) return "Počkejte prosím na načtení statistik ze zápasu.";
@@ -726,8 +668,8 @@ export function CardGeneratorWizard({
     });
   };
 
-  const handleSelectTemplate = (template: Template) => {
-    setData((d) => ({ ...d, templateId: template.id, template }));
+  const handleSelectPreset = (preset: Preset) => {
+    setData((d) => ({ ...d, preset }));
   };
 
   const handleMatchSelect = async (matchId: string) => {
@@ -779,8 +721,8 @@ export function CardGeneratorWizard({
         playerName: data.player.displayName,
         cardType: data.cardType,
         rarity: data.rarity,
-        templateId: data.templateId,
-        templateStyle: data.template?.category,
+        templateId: data.preset?.id ?? DEFAULT_PRESET.id,
+        design: data.preset?.design ?? DEFAULT_PRESET.design,
         season: data.season.trim(),
         matchId: data.matchId,
         cardStats: buildCardStats(data.cardType, data.player, data.matchStats ?? null),
@@ -806,10 +748,9 @@ export function CardGeneratorWizard({
         )}
         {step === 1 && <StepCardType selected={data.cardType} onSelect={handleSelectCardType} />}
         {step === 2 && (
-          <StepTemplate
-            templates={templates}
-            selectedId={data.templateId}
-            isAllowed={isTemplateAllowed}
+          <StepDesign
+            selectedId={data.preset?.id ?? ""}
+            isAllowed={isPresetAllowed}
             locale={locale}
             player={data.player}
             sampleCard={
@@ -823,7 +764,7 @@ export function CardGeneratorWizard({
                   : { overall: 50 },
               } as Card
             }
-            onSelect={handleSelectTemplate}
+            onSelect={handleSelectPreset}
           />
         )}
         {step === 3 && (

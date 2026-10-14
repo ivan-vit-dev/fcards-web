@@ -11,6 +11,7 @@ const CALL_ERROR_MESSAGES: Record<string, string> = {
   "functions/failed-precondition": "Tato AI funkce je dostupná od tarifu Premium.",
   "functions/not-found": "Kartička nenalezena.",
   "functions/unauthenticated": "Pro použití AI se přihlaste.",
+  "functions/unavailable": "AI služba je teď nedostupná. Zkuste to prosím později.",
 };
 
 export interface AIGenerationState {

@@ -17,7 +17,6 @@ import {
   getPlayers,
   getTeams,
   getMatches,
-  getTemplates,
   createCard,
   updateUserDoc,
 } from "@/lib/firebaseServices";
@@ -25,7 +24,7 @@ import { canGenerateCard } from "@/lib/cardEngine";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import { useSyncProgress } from "@/hooks/use-progress";
 import { currentMonth, getCardsGenerated, getUpgradeReason } from "@/lib/subscriptionEngine";
-import type { Card, Template, Match } from "@/types";
+import type { Card, Match } from "@/types";
 import toast from "react-hot-toast";
 
 export default function NewCardPage() {
@@ -38,7 +37,6 @@ export default function NewCardPage() {
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
 
-  const [templates, setTemplates] = useState<Template[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -52,7 +50,6 @@ export default function NewCardPage() {
         const perTeam = await Promise.all(userTeams.map((t) => getMatches(t.id)));
         setMatches(perTeam.flat());
       }),
-      getTemplates().then(setTemplates),
     ])
       .catch((err) => {
         console.warn("[NewCardPage]", err);
@@ -145,7 +142,6 @@ export default function NewCardPage() {
           locale={locale}
           players={players}
           matches={matches}
-          templates={templates}
           onGenerate={handleGenerate}
         />
       </div>

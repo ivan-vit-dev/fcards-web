@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
-export type EditorTab = "content" | "design" | "effects";
+export type EditorTab = "content" | "look" | "customize";
 
 interface EditorToolbarProps {
   activeTab: EditorTab;
@@ -15,8 +15,8 @@ export function EditorToolbar({ activeTab, onTabChange }: EditorToolbarProps) {
 
   const tabs: { key: EditorTab; label: string }[] = [
     { key: "content", label: t("content") },
-    { key: "design", label: t("design") },
-    { key: "effects", label: t("effects") },
+    { key: "look", label: t("look") },
+    { key: "customize", label: t("customize") },
   ];
 
   return (

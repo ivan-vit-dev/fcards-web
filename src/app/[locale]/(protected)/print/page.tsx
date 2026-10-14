@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { toPng } from "html-to-image";
 import { Printer, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,20 +11,33 @@ import { useAuthStore } from "@/store/authStore";
 import { useCardsStore, usePlayersStore } from "@/store/appStore";
 import { getCards, getPlayers, incrementCardPrintCount } from "@/lib/firebaseServices";
 import { exportCardsToPDF, PRINT_FORMATS, type PrintFormat } from "@/lib/printEngine";
+import { resolveDesign, shapeOutline } from "@/lib/cardDesign";
 import { TIER_LABELS, canPrint, canUsePrintFormat } from "@/lib/subscriptionEngine";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 
 export default function PrintPage() {
+  return (
+    <Suspense>
+      <PrintCenter />
+    </Suspense>
+  );
+}
+
+function PrintCenter() {
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
+  // ?cardId= preselects a card (from the card detail page).
+  const preselectedId = useSearchParams().get("cardId");
 
   const { user } = useAuthStore();
   const { cards, setCards, updateCard } = useCardsStore();
   const { players, setPlayers } = usePlayersStore();
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(preselectedId ? [preselectedId] : [])
+  );
   const [format, setFormat] = useState<PrintFormat>("a4-9");
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -96,7 +109,11 @@ export default function PrintPage() {
         setProgress(Math.round(((i + 1) / selectedCards.length) * 100));
       }
 
-      exportCardsToPDF(images, format);
+      exportCardsToPDF(
+        images,
+        format,
+        selectedCards.map((c) => shapeOutline(resolveDesign(c).shape))
+      );
 
       await Promise.allSettled(selectedCards.map((c) => incrementCardPrintCount(c.id)));
       selectedCards.forEach((c) => updateCard(c.id, { printCount: (c.printCount ?? 0) + 1 }));
@@ -241,6 +258,7 @@ export default function PrintPage() {
               card={card}
               player={players.find((p) => p.id === card.playerId)}
               size="lg"
+              flat
             />
           </div>
         ))}
