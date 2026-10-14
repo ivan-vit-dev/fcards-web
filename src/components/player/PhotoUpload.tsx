@@ -23,6 +23,11 @@ export function PhotoUpload({ userId, currentPhotoURL, displayName, onUpload }: 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Vyberte obrázek ve formátu JPG, PNG nebo WebP.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Soubor je příliš velký (max. 5 MB).");
       return;
@@ -70,10 +75,11 @@ export function PhotoUpload({ userId, currentPhotoURL, displayName, onUpload }: 
         <Camera className="h-3.5 w-3.5" />
         {preview ? "Změnit foto" : "Nahrát foto"}
       </Button>
+      <p className="text-xs text-muted-foreground">Nepovinné · JPG, PNG nebo WebP, max. 5 MB</p>
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={handleChange}
       />

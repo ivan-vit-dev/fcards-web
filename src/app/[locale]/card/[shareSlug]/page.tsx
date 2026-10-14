@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, Loader2, QrCode } from "lucide-react";
@@ -11,10 +11,10 @@ import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
 import { ShareButtons } from "@/components/share/ShareButtons";
 import { QRCodePanel } from "@/components/share/QRCodePanel";
-import { getCardBySlug } from "@/lib/firebaseServices";
+import { getPublicCardBySlug, getPublicPlayerDoc } from "@/lib/firebaseServices";
 import { getCardShareUrl } from "@/lib/shareUtils";
 import { CARD_TYPE_LABELS } from "@/lib/cardEngine";
-import type { Card } from "@/types";
+import type { Card, Player } from "@/types";
 
 export default function PublicCardPage() {
   const params = useParams();
@@ -22,17 +22,26 @@ export default function PublicCardPage() {
   const locale = (params?.locale as string) ?? "cs";
 
   const [card, setCard] = useState<Card | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     if (!shareSlug) return;
-    getCardBySlug(shareSlug).then((c) => {
-      if (!c || !c.isPublic) setNotFound(true);
-      else setCard(c);
-      setLoading(false);
-    });
+    getPublicCardBySlug(shareSlug)
+      .then(async (c) => {
+        if (!c) {
+          setNotFound(true);
+          return;
+        }
+        setCard(c);
+        // Photo/jersey come from the player only when their profile is public.
+        setPlayer(await getPublicPlayerDoc(c.userId, c.playerId));
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
   }, [shareSlug]);
 
   const shareUrl = card ? getCardShareUrl(card.shareSlug, locale) : "";
@@ -65,7 +74,9 @@ export default function PublicCardPage() {
           <div className="space-y-8">
             {/* Card preview */}
             <div className="flex justify-center">
-              <CardPreview card={card} size="lg" />
+              <div ref={cardRef} className="inline-block">
+                <CardPreview card={card} player={player ?? undefined} size="lg" />
+              </div>
             </div>
 
             {/* Meta */}
@@ -118,7 +129,12 @@ export default function PublicCardPage() {
             {/* Share */}
             <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
               <p className="text-sm font-semibold">Sdílet kartičku</p>
-              <ShareButtons card={card} locale={locale} />
+              <ShareButtons
+                card={card}
+                locale={locale}
+                playerName={player?.displayName ?? card.playerName}
+                captureNode={() => cardRef.current}
+              />
             </div>
 
             {/* Branding */}

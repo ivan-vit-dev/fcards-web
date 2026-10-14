@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { httpsCallable } from "firebase/functions";
-import { onSnapshot, doc } from "firebase/firestore";
-import { functions, db } from "@/lib/firebase";
+import { functions } from "@/lib/firebase";
 import type { AIStatus } from "@/types";
 import toast from "react-hot-toast";
 
-const GENERATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const CALL_ERROR_MESSAGES: Record<string, string> = {
+  "functions/resource-exhausted": "Vyčerpali jste AI kredity na tento měsíc.",
+  "functions/failed-precondition": "Tato AI funkce je dostupná od tarifu Premium.",
+  "functions/not-found": "Kartička nenalezena.",
+  "functions/unauthenticated": "Pro použití AI se přihlaste.",
+};
 
 export interface AIGenerationState {
   status: AIStatus;
@@ -16,6 +20,13 @@ export interface AIGenerationState {
   isRunning: boolean;
 }
 
+interface AIResult {
+  imageUrl?: string;
+  story?: string;
+}
+
+// AI callables finish the job before responding (and also write the result to the card),
+// so the response itself carries the result — no Firestore listener needed.
 export function useAIGeneration() {
   const [state, setState] = useState<AIGenerationState>({
     status: "pending",
@@ -24,79 +35,30 @@ export function useAIGeneration() {
     isRunning: false,
   });
 
-  const unsubRef = useRef<(() => void) | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const cleanup = useCallback(() => {
-    unsubRef.current?.();
-    unsubRef.current = null;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  const pollCard = useCallback((cardId: string) => {
-    const unsub = onSnapshot(doc(db, "cards", cardId), (snap) => {
-      const data = snap.data();
-      if (!data) return;
-      const aiStatus = data.aiStatus as AIStatus;
-
-      setState((s) => ({
-        ...s,
-        status: aiStatus,
-        imageUrl: data.imageUrl ?? s.imageUrl,
-        story: data.aiStory ?? s.story,
-      }));
-
-      if (aiStatus === "done") {
-        cleanup();
-        setState((s) => ({ ...s, isRunning: false }));
-      } else if (aiStatus === "error") {
-        cleanup();
-        setState((s) => ({ ...s, isRunning: false }));
-        toast.error("Generování selhalo. Zkuste to znovu.");
+  const callFunction = useCallback(
+    async (functionName: string, args: Record<string, unknown>): Promise<AIResult> => {
+      setState({ status: "processing", imageUrl: null, story: null, isRunning: true });
+      try {
+        const fn = httpsCallable<Record<string, unknown>, AIResult>(functions, functionName, {
+          timeout: 5 * 60 * 1000,
+        });
+        const { data } = await fn(args);
+        setState({
+          status: "done",
+          imageUrl: data.imageUrl ?? null,
+          story: data.story ?? null,
+          isRunning: false,
+        });
+        return data;
+      } catch (err) {
+        setState((s) => ({ ...s, status: "error", isRunning: false }));
+        const code = (err as { code?: string }).code ?? "";
+        toast.error(CALL_ERROR_MESSAGES[code] ?? "Generování selhalo. Zkuste to znovu.");
+        throw err;
       }
-    });
+    },
+    []
+  );
 
-    unsubRef.current = unsub;
-
-    timeoutRef.current = setTimeout(() => {
-      cleanup();
-      setState((s) => ({ ...s, status: "error", isRunning: false }));
-      toast.error("Časový limit vypršel. Zkuste to znovu.");
-    }, GENERATION_TIMEOUT_MS);
-  }, [cleanup]);
-
-  const callFunction = useCallback(async (
-    functionName: string,
-    args: Record<string, unknown>,
-    cardId?: string
-  ): Promise<Record<string, unknown>> => {
-    cleanup();
-    setState({ status: "pending", imageUrl: null, story: null, isRunning: true });
-
-    try {
-      const fn = httpsCallable<Record<string, unknown>, Record<string, unknown>>(
-        functions,
-        functionName
-      );
-      const result = await fn(args);
-
-      if (cardId) {
-        pollCard(cardId);
-      } else {
-        setState((s) => ({ ...s, isRunning: false, status: "done" }));
-      }
-
-      return result.data;
-    } catch (err) {
-      cleanup();
-      setState((s) => ({ ...s, status: "error", isRunning: false }));
-      toast.error("Chyba při volání AI funkce.");
-      throw err;
-    }
-  }, [cleanup, pollCard]);
-
-  return { ...state, callFunction, cleanup };
+  return { ...state, callFunction };
 }

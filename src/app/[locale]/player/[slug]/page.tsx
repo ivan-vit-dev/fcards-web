@@ -16,7 +16,11 @@ import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
-import { getPublicPlayerBySlug, getCards, getAchievements, getUserAchievements, getUserDoc } from "@/lib/firebaseServices";
+import {
+  getPublicPlayerBySlug,
+  getPublicCardsForPlayer,
+  getAchievements,
+} from "@/lib/firebaseServices";
 import { getLevelTier } from "@/lib/utils";
 import { LevelBadge } from "@/components/achievements/LevelBadge";
 import type { Player, PlayerPosition, Card, Achievement } from "@/types";
@@ -43,7 +47,6 @@ export default function PublicPlayerPage() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
-  const [userLevel, setUserLevel] = useState(1);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -57,20 +60,20 @@ export default function PublicPlayerPage() {
         }
         setPlayer(p);
 
-        // Load public cards, achievements, and user level in parallel
-        const [allCards, allAchievements, userAchievements, userDoc] = await Promise.all([
-          getCards(p.userId).catch(() => [] as Card[]),
+        // Guests can't read the owner's user doc; level + achievements are mirrored on the player.
+        const [publicCards, allAchievements] = await Promise.all([
+          getPublicCardsForPlayer(p.userId, p.id).catch(() => [] as Card[]),
           getAchievements().catch(() => [] as Achievement[]),
-          getUserAchievements(p.userId).catch(() => []),
-          getUserDoc(p.userId).catch(() => null),
         ]);
-        setCards(allCards.filter((c) => c.playerId === p.id && c.isPublic));
-        if (userDoc) setUserLevel(userDoc.level);
-        const unlockedIds = new Set(userAchievements.map((ua) => ua.achievementId));
+        setCards(publicCards);
+        const unlockedIds = new Set(p.progress?.achievementIds ?? []);
         setUnlockedAchievements(allAchievements.filter((a) => unlockedIds.has(a.id)));
       })
+      .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const userLevel = player?.progress?.level ?? 1;
 
   const initials =
     player?.displayName
@@ -200,7 +203,7 @@ export default function PublicPlayerPage() {
                       className="group relative"
                     >
                       <div className="rounded-xl overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]">
-                        <CardPreview card={card} size="sm" />
+                        <CardPreview card={card} player={player} size="sm" />
                       </div>
                       <div className="mt-1.5 flex items-center justify-between px-0.5">
                         <RarityBadge rarity={card.rarity} />

@@ -111,7 +111,7 @@ export function CardEditorCanvas({
     if (!layers) return;
     const color = RARITY_COLORS_CANVAS[card.rarity] ?? "#888888";
     drawBackground(layers.bg, card, color);
-    drawPhoto(layers.photo, player, color);
+    drawPhoto(layers.photo, card.photoUrl ?? player?.photoURL, color);
     drawStats(layers.stats, card, color);
     drawText(layers.text, card, player, color);
     applyEffectToLayer(layers.effects, card.effect, STAGE_W, STAGE_H);
@@ -160,10 +160,10 @@ function drawBackground(layer: Konva.Layer, card: Card, color: string) {
   layer.batchDraw();
 }
 
-function drawPhoto(layer: Konva.Layer, player: Player | null, color: string) {
+function drawPhoto(layer: Konva.Layer, photoUrl: string | undefined, color: string) {
   layer.destroyChildren();
 
-  if (player?.photoURL) {
+  if (photoUrl) {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
@@ -207,7 +207,7 @@ function drawPhoto(layer: Konva.Layer, player: Player | null, color: string) {
 
       layer.batchDraw();
     };
-    img.src = player.photoURL;
+    img.src = photoUrl;
   } else {
     // Placeholder gradient + silhouette circle
     layer.add(

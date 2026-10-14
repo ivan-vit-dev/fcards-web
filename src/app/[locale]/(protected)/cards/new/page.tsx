@@ -11,34 +11,35 @@ import { useAuthStore } from "@/store/authStore";
 import {
   usePlayersStore,
   useTeamsStore,
-  useMatchesStore,
   useCardsStore,
 } from "@/store/appStore";
 import {
   getPlayers,
   getTeams,
+  getMatches,
   getTemplates,
   createCard,
   updateUserDoc,
 } from "@/lib/firebaseServices";
 import { canGenerateCard } from "@/lib/cardEngine";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
-import { getUpgradeReason } from "@/lib/subscriptionEngine";
+import { useSyncProgress } from "@/hooks/use-progress";
+import { currentMonth, getCardsGenerated, getUpgradeReason } from "@/lib/subscriptionEngine";
 import type { Card, Template, Match } from "@/types";
 import toast from "react-hot-toast";
 
 export default function NewCardPage() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
+  const syncProgress = useSyncProgress();
   const { players, setPlayers } = usePlayersStore();
-  const { teams, setTeams } = useTeamsStore();
-  const { matches } = useMatchesStore();
+  const { setTeams } = useTeamsStore();
   const { addCard } = useCardsStore();
   const router = useRouter();
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
 
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [allMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
@@ -46,15 +47,19 @@ export default function NewCardPage() {
     if (!user) return;
     Promise.all([
       getPlayers(user.uid).then(setPlayers),
-      getTeams(user.uid).then(setTeams),
+      getTeams(user.uid).then(async (userTeams) => {
+        setTeams(userTeams);
+        const perTeam = await Promise.all(userTeams.map((t) => getMatches(t.id)));
+        setMatches(perTeam.flat());
+      }),
       getTemplates().then(setTemplates),
-    ]).finally(() => setLoading(false));
+    ])
+      .catch((err) => {
+        console.warn("[NewCardPage]", err);
+        toast.error("Nepodařilo se načíst data pro kartičku.");
+      })
+      .finally(() => setLoading(false));
   }, [user, setPlayers, setTeams]);
-
-  // Combine store matches with any loaded
-  const combinedMatches = [...matches, ...allMatches.filter(
-    (m) => !matches.find((sm) => sm.id === m.id)
-  )];
 
   if (!user) return null;
 
@@ -104,14 +109,22 @@ export default function NewCardPage() {
 
   const handleGenerate = async (draft: Partial<Card>) => {
     if (!user) return;
-    const card = await createCard({ ...draft, userId: user.uid });
-    addCard(card);
-    // Increment monthly counter
-    await updateUserDoc(user.uid, {
-      cardsGeneratedThisMonth: (user.cardsGeneratedThisMonth ?? 0) + 1,
-    });
-    toast.success("Kartička vytvořena!");
-    router.push(`/${locale}/cards/${card.id}`);
+    try {
+      const card = await createCard({ ...draft, userId: user.uid });
+      addCard(card);
+      const counter = {
+        cardsMonth: currentMonth(),
+        cardsGeneratedThisMonth: getCardsGenerated(user) + 1,
+      };
+      await updateUserDoc(user.uid, counter);
+      setUser({ ...user, ...counter });
+      void syncProgress();
+      toast.success("Kartička vytvořena!");
+      router.push(`/${locale}/cards/${card.id}`);
+    } catch (err) {
+      console.warn("[NewCardPage] createCard", err);
+      toast.error("Kartičku se nepodařilo vytvořit. Zkuste to prosím znovu.");
+    }
   };
 
   return (
@@ -127,10 +140,11 @@ export default function NewCardPage() {
 
       <div className="bg-card border border-border rounded-2xl p-6">
         <CardGeneratorWizard
-          userId={user.uid}
+          userTier={user.subscriptionTier}
+          isAdmin={user.role === "superAdmin"}
+          locale={locale}
           players={players}
-          teams={teams}
-          matches={combinedMatches}
+          matches={matches}
           templates={templates}
           onGenerate={handleGenerate}
         />

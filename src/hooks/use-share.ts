@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { toPng } from "html-to-image";
 import {
   getCardShareUrl,
   buildFacebookShareUrl,
@@ -24,9 +25,10 @@ interface UseShareOptions {
   card: Card;
   locale?: string;
   playerName?: string;
+  captureNode?: () => HTMLElement | null; // rendered card to save for "download"
 }
 
-export function useShare({ card, locale = "cs", playerName }: UseShareOptions) {
+export function useShare({ card, locale = "cs", playerName, captureNode }: UseShareOptions) {
   const [sharing, setSharing] = useState(false);
   const shareUrl = getCardShareUrl(card.shareSlug, locale);
   const shareText = playerName
@@ -34,8 +36,8 @@ export function useShare({ card, locale = "cs", playerName }: UseShareOptions) {
     : "Podívejte se na mou fotbalovou kartičku! 🎴⚽";
 
   const trackAndShare = useCallback(async () => {
-    await incrementShareCount(card.id, card.shareCount).catch(() => {});
-  }, [card.id, card.shareCount]);
+    await incrementShareCount(card.id).catch(() => {});
+  }, [card.id]);
 
   const share = useCallback(
     async (platform: SharePlatform) => {
@@ -82,23 +84,35 @@ export function useShare({ card, locale = "cs", playerName }: UseShareOptions) {
             await trackAndShare();
             break;
 
-          case "download":
-            if (card.imageUrl) {
-              const a = document.createElement("a");
-              a.href = card.imageUrl;
-              a.download = `kartička-${card.shareSlug}.png`;
-              a.click();
-              await trackAndShare();
-            } else {
+          case "download": {
+            // Prefer rendering the card shown on the page; a cross-origin URL would just open
+            // in a new tab because browsers ignore `download` for other origins.
+            const node = captureNode?.();
+            const href = node
+              ? await toPng(node, { pixelRatio: 3, cacheBust: true })
+              : card.imageUrl;
+            if (!href) {
               toast.error("Obrázek kartičky není k dispozici.");
+              break;
             }
+            const a = document.createElement("a");
+            a.href = href;
+            a.download = `karticka-${card.shareSlug}.png`;
+            a.click();
+            await trackAndShare();
             break;
+          }
+        }
+      } catch (err) {
+        // Closing the native share sheet rejects with AbortError — not a failure.
+        if ((err as { name?: string }).name !== "AbortError") {
+          toast.error("Sdílení se nepodařilo. Zkuste zkopírovat odkaz.");
         }
       } finally {
         setSharing(false);
       }
     },
-    [sharing, shareUrl, shareText, trackAndShare, card.imageUrl, card.shareSlug]
+    [sharing, shareUrl, shareText, trackAndShare, card.imageUrl, card.shareSlug, captureNode]
   );
 
   return { share, sharing, shareUrl, shareText };

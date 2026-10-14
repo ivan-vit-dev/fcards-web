@@ -27,15 +27,20 @@ service cloud.firestore {
 
     // role and subscriptionTier are privileged: users start as free players and
     // only a superAdmin (or the console / a payment webhook) may change them.
+    // AI credit counters, XP and level are written only by Cloud Functions (admin SDK).
     match /users/{uid} {
       allow read:   if isUser(uid) || isSuperAdmin();
       allow create: if isUser(uid)
         && request.resource.data.role == 'player'
-        && request.resource.data.subscriptionTier == 'free';
+        && request.resource.data.subscriptionTier == 'free'
+        && request.resource.data.get('aiCreditsUsedThisMonth', 0) == 0
+        && !('aiCreditsMonth' in request.resource.data)
+        && request.resource.data.get('xp', 0) == 0
+        && request.resource.data.get('level', 1) == 1;
       allow update: if isSuperAdmin()
         || (isUser(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
-                .hasAny(['role', 'subscriptionTier']));
+                .hasAny(['role', 'subscriptionTier', 'aiCreditsUsedThisMonth', 'aiCreditsMonth', 'xp', 'level']));
       allow delete: if isSuperAdmin();
     }
 
@@ -115,8 +120,9 @@ service cloud.firestore {
 
     // ─── Achievements (global definitions) ────────────────────────────────────
 
+    // Definitions are public so guest-facing player profiles can name unlocked achievements.
     match /achievements/{achievementId} {
-      allow read:  if isSignedIn();
+      allow read:  if true;
       allow write: if isSuperAdmin();
     }
 

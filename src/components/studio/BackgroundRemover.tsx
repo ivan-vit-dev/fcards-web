@@ -33,7 +33,9 @@ export function BackgroundRemover({ cardId, onComplete }: Props) {
       await uploadBytes(storageRef, file);
       const uploadedUrl = await getDownloadURL(storageRef);
 
-      await callFunction("removeBackground", { cardId, imageUrl: uploadedUrl }, cardId);
+      await callFunction("removeBackground", { cardId, imageUrl: uploadedUrl });
+    } catch {
+      // useAIGeneration already shows the error toast
     } finally {
       setUploading(false);
     }
@@ -42,12 +44,12 @@ export function BackgroundRemover({ cardId, onComplete }: Props) {
   if (imageUrl && status === "done") {
     return (
       <div className="space-y-4">
-        <div className="relative rounded-xl overflow-hidden border border-border bg-[url('/checkerboard.png')] bg-repeat">
+        <div className="relative rounded-xl overflow-hidden border border-border bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt="Background removed" className="w-full max-h-80 object-contain" />
         </div>
         <Button className="w-full" onClick={() => onComplete(imageUrl)}>
-          Použít tento obrázek
+          Hotovo
         </Button>
       </div>
     );

@@ -25,7 +25,8 @@ export function PageTransition({ children }: Props) {
         animate="animate"
         exit="exit"
         transition={{ duration: 0.16, ease: "easeOut" }}
-        className="flex-1 flex flex-col min-h-0"
+        // Pages set their own max-w-*; centre that column in the content area.
+        className="flex-1 flex flex-col min-h-0 [&>*]:mx-auto [&>*]:w-full"
       >
         {children}
       </motion.div>

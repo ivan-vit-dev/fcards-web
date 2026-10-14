@@ -1,4 +1,4 @@
-import { canGenerateCard as _canGenerateCard } from "./subscriptionEngine";
+import { canGenerateCard as _canGenerateCard, getCardsGenerated } from "./subscriptionEngine";
 import type {
   Player,
   PlayerMatchStats,
@@ -9,7 +9,8 @@ import type {
 } from "@/types";
 
 export function canGenerateCard(user: User): boolean {
-  return _canGenerateCard(user.subscriptionTier, user.cardsGeneratedThisMonth ?? 0);
+  if (user.role === "superAdmin") return true;
+  return _canGenerateCard(user.subscriptionTier, getCardsGenerated(user));
 }
 
 // ─── Share slug ───────────────────────────────────────────────────────────────

@@ -16,6 +16,8 @@ import {
   limit,
   getCountFromServer,
   writeBatch,
+  runTransaction,
+  increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { generateSlug } from "./utils";
@@ -33,6 +35,16 @@ import type {
   UserAchievement,
   Club,
 } from "@/types";
+
+// For edit forms: a field explicitly set to undefined (e.g. a cleared optional input) is
+// deleted rather than skipped, so the old value doesn't silently survive.
+function updatePayload(data: object): Record<string, unknown> {
+  const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  for (const [key, value] of Object.entries(data)) {
+    payload[key] = value === undefined ? deleteField() : value;
+  }
+  return payload;
+}
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -122,10 +134,7 @@ export async function updatePlayer(
   playerId: string,
   data: Partial<Player>
 ): Promise<void> {
-  await updateDoc(doc(db, "users", userId, "players", playerId), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
+  await updateDoc(doc(db, "users", userId, "players", playerId), updatePayload(data));
 }
 
 export async function deletePlayer(userId: string, playerId: string): Promise<void> {
@@ -190,10 +199,7 @@ export async function createTeam(data: Partial<Team>): Promise<Team> {
 }
 
 export async function updateTeam(teamId: string, data: Partial<Team>): Promise<void> {
-  await updateDoc(doc(db, "teams", teamId), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
+  await updateDoc(doc(db, "teams", teamId), updatePayload(data));
 }
 
 export async function deleteTeam(teamId: string): Promise<void> {
@@ -228,10 +234,7 @@ export async function createMatch(data: Partial<Match>): Promise<Match> {
 }
 
 export async function updateMatch(matchId: string, data: Partial<Match>): Promise<void> {
-  await updateDoc(doc(db, "matches", matchId), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
+  await updateDoc(doc(db, "matches", matchId), updatePayload(data));
 }
 
 // ─── Player match stats ───────────────────────────────────────────────────────
@@ -243,17 +246,57 @@ export async function getPlayerMatchStats(matchId: string): Promise<PlayerMatchS
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PlayerMatchStats));
 }
 
-export async function setPlayerMatchStats(
+function careerContribution(s: Partial<PlayerMatchStats> | null): CareerStats {
+  return {
+    matchesPlayed: s && (s.minutesPlayed ?? 0) > 0 ? 1 : 0,
+    goals: s?.goals ?? 0,
+    assists: s?.assists ?? 0,
+    yellowCards: s?.yellowCards ?? 0,
+    redCards: s?.redCards ?? 0,
+    cleanSheets: s?.cleanSheet ? 1 : 0,
+    saves: s?.saves ?? 0,
+    mvpCount: s?.isMVP ? 1 : 0,
+  };
+}
+
+// Saves one player's match stats and moves their career totals by the difference from what
+// was stored before, in one transaction — re-saving the same match never double-counts.
+export async function saveMatchStats(
+  userId: string,
   matchId: string,
   playerId: string,
   data: Partial<PlayerMatchStats>
 ): Promise<void> {
-  await setDoc(doc(db, "matches", matchId, "playerStats", playerId), {
-    matchId,
-    playerId,
-    ...data,
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
+  const statsRef = doc(db, "matches", matchId, "playerStats", playerId);
+  const playerRef = doc(db, "users", userId, "players", playerId);
+
+  await runTransaction(db, async (tx) => {
+    const prevSnap = await tx.get(statsRef);
+    const prev = prevSnap.exists() ? (prevSnap.data() as PlayerMatchStats) : null;
+    const before = careerContribution(prev);
+    const after = careerContribution({ ...prev, ...data });
+
+    tx.set(
+      statsRef,
+      {
+        ...data,
+        matchId,
+        playerId,
+        ...(prev ? {} : { createdAt: serverTimestamp() }),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    const careerUpdates: Record<string, unknown> = {};
+    for (const key of Object.keys(after) as (keyof CareerStats)[]) {
+      const delta = after[key] - before[key];
+      if (delta !== 0) careerUpdates[`careerStats.${key}`] = increment(delta);
+    }
+    if (Object.keys(careerUpdates).length > 0) {
+      tx.update(playerRef, { ...careerUpdates, updatedAt: serverTimestamp() });
+    }
+  });
 }
 
 // ─── Cards ────────────────────────────────────────────────────────────────────
@@ -274,14 +317,54 @@ export async function getCardDoc(cardId: string): Promise<Card | null> {
   return { id: snap.id, ...snap.data() } as Card;
 }
 
-export async function getCardBySlug(shareSlug: string): Promise<Card | null> {
+// The isPublic filter is required: rules only let non-owners list public cards.
+export async function getPublicCardBySlug(shareSlug: string): Promise<Card | null> {
   const q = query(
     collection(db, "cards"),
-    where("shareSlug", "==", shareSlug)
+    where("shareSlug", "==", shareSlug),
+    where("isPublic", "==", true)
   );
   const snap = await getDocs(q);
   if (snap.empty) return null;
   return { id: snap.docs[0].id, ...snap.docs[0].data() } as Card;
+}
+
+// Guests may only list public cards, so the isPublic filter is required.
+export async function getPublicCardsForPlayer(userId: string, playerId: string): Promise<Card[]> {
+  const q = query(
+    collection(db, "cards"),
+    where("userId", "==", userId),
+    where("playerId", "==", playerId),
+    where("isPublic", "==", true)
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Card))
+    .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+}
+
+// Readable by guests only when the player profile is public; otherwise resolves to null.
+export async function getPublicPlayerDoc(userId: string, playerId: string): Promise<Player | null> {
+  try {
+    return await getPlayerDoc(userId, playerId);
+  } catch {
+    return null;
+  }
+}
+
+// increment() keeps concurrent shares from rejecting each other (rules allow exactly +1).
+export async function incrementCardShareCount(cardId: string): Promise<void> {
+  await updateDoc(doc(db, "cards", cardId), {
+    shareCount: increment(1),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function incrementCardPrintCount(cardId: string): Promise<void> {
+  await updateDoc(doc(db, "cards", cardId), {
+    printCount: increment(1),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function createCard(data: Partial<Card>): Promise<Card> {
@@ -337,22 +420,6 @@ export async function getUserAchievements(userId: string): Promise<UserAchieveme
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as UserAchievement));
 }
 
-export async function unlockAchievement(
-  userId: string,
-  achievementId: string
-): Promise<void> {
-  await setDoc(
-    doc(db, "userAchievements", userId, "unlocked", achievementId),
-    {
-      userId,
-      achievementId,
-      unlockedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }
-  );
-}
-
 // ─── Clubs ────────────────────────────────────────────────────────────────────
 
 export async function getClubDoc(clubId: string): Promise<Club | null> {
@@ -374,10 +441,7 @@ export async function createClub(data: Partial<Club>): Promise<Club> {
 }
 
 export async function updateClub(clubId: string, data: Partial<Club>): Promise<void> {
-  await updateDoc(doc(db, "clubs", clubId), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
+  await updateDoc(doc(db, "clubs", clubId), updatePayload(data));
 }
 
 export async function getClubsByOwner(ownerId: string): Promise<Club[]> {

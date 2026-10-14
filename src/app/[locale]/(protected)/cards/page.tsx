@@ -6,8 +6,8 @@ import { useParams } from "next/navigation";
 import { Plus, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
-import { useCardsStore } from "@/store/appStore";
-import { getCards } from "@/lib/firebaseServices";
+import { useCardsStore, usePlayersStore } from "@/store/appStore";
+import { getCards, getPlayers } from "@/lib/firebaseServices";
 import { useCollection } from "@/hooks/use-collection";
 import { CollectionFilters } from "@/components/collection/CollectionFilters";
 import { CollectionGrid } from "@/components/collection/CollectionGrid";
@@ -20,10 +20,19 @@ export default function CardsPage() {
   const locale = (params?.locale as string) ?? "cs";
   const [loading, setLoading] = useState(true);
 
+  const setPlayers = usePlayersStore((s) => s.setPlayers);
+  const uid = user?.uid;
+
   useEffect(() => {
-    if (!user) return;
-    getCards(user.uid).then(setCards).finally(() => setLoading(false));
-  }, [user, setCards]);
+    if (!uid) return;
+    Promise.all([getCards(uid), getPlayers(uid)])
+      .then(([c, p]) => {
+        setCards(c);
+        setPlayers(p);
+      })
+      .catch((err) => console.warn("[CardsPage]", err))
+      .finally(() => setLoading(false));
+  }, [uid, setCards, setPlayers]);
 
   const {
     filters,

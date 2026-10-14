@@ -52,7 +52,7 @@ export function useCardEditor(
   }, []);
 
   const updateTemplate = useCallback((t: Template) => {
-    setCard((c) => ({ ...c, templateId: t.id }));
+    setCard((c) => ({ ...c, templateId: t.id, templateStyle: t.category }));
     setTemplate(t);
     setIsDirty(true);
   }, []);
@@ -66,6 +66,7 @@ export function useCardEditor(
         cardStats: card.cardStats,
         season: card.season,
         templateId: card.templateId,
+        templateStyle: card.templateStyle,
       });
       setIsDirty(false);
       toast.success("Kartička uložena.");

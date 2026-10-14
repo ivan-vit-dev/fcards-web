@@ -9,6 +9,7 @@ import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
 import { CardHologramEffect } from "./CardHologramEffect";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePlayersStore } from "@/store/appStore";
 
 interface Props {
   cards: Card[];
@@ -21,6 +22,7 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const players = usePlayersStore((s) => s.players);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -37,9 +39,9 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-5">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="aspect-[5/7] rounded-xl" />
+          <Skeleton key={i} className="w-[210px] h-[294px] mx-auto rounded-xl" />
         ))}
       </div>
     );
@@ -47,23 +49,24 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-5">
         {cards.map((card) => (
           <Link key={card.id} href={`/${locale}/cards/${card.id}`}>
             <div className="group space-y-2">
-              <div className="relative">
+              <div className="relative w-fit mx-auto">
                 <CardPreview
                   card={card}
-                  size="sm"
+                  player={players.find((p) => p.id === card.playerId)}
+                  size="md"
                   className={cn(
-                    "w-full transition-transform duration-200 group-hover:scale-[1.03]",
+                    "transition-transform duration-200 group-hover:scale-[1.03]",
                     (card.rarity === "legendary" || card.rarity === "mythic") &&
                       "shadow-card-legendary"
                   )}
                 />
                 <CardHologramEffect rarity={card.rarity} effect={card.effect} />
               </div>
-              <div className="px-0.5">
+              <div className="px-0.5 text-center">
                 <RarityBadge rarity={card.rarity} className="text-[10px]" />
                 {card.season && (
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">

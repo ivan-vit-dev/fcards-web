@@ -69,7 +69,9 @@ export interface User {
   xp: number;
   level: number;
   cardsGeneratedThisMonth: number;
+  cardsMonth?: string; // "YYYY-MM" the card counter belongs to
   aiCreditsUsedThisMonth: number;
+  aiCreditsMonth?: string; // "YYYY-MM" the counter belongs to; set by Cloud Functions
   fcmToken?: string;
   clubId?: string;
   createdAt: Timestamp;
@@ -102,6 +104,7 @@ export interface Player {
   clubId?: string;
   isPublic: boolean;
   careerStats: CareerStats;
+  progress?: { level: number; achievementIds: string[] }; // mirrored by syncProgress
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -182,14 +185,18 @@ export interface Card {
   id: string;
   userId: string;
   playerId: string;
+  playerName?: string; // snapshot for viewers who can't read a private player doc
   cardType: CardType;
   rarity: Rarity;
   templateId: string;
-  imageUrl?: string;
+  templateStyle?: string; // Template.category at creation time; see lib/cardTemplates.ts
+  photoUrl?: string; // card-specific photo (AI output); falls back to the player's photo
+  imageUrl?: string; // full rendered card exported from the editor (download/share)
   thumbnailUrl?: string;
   shareSlug: string;
   isPublic: boolean;
   aiStyle?: AIStyle;
+  aiStory?: string;
   aiStatus: AIStatus;
   aiJobId?: string;
   effect: CardEffect;

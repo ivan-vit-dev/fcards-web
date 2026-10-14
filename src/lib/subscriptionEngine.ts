@@ -1,4 +1,4 @@
-import type { SubscriptionTier } from "@/types";
+import type { SubscriptionTier, User } from "@/types";
 import type { PrintFormat } from "./printEngine";
 
 // ─── Tier limits (static defaults; can be overridden by Firebase Remote Config in prod) ───
@@ -95,6 +95,33 @@ export function canUseAI(
   return aiCreditsUsedThisMonth < limits.aiCreditsPerMonth;
 }
 
+export const currentMonth = () => new Date().toISOString().slice(0, 7);
+
+// Stored counters only count for the month they were written in; a new month starts at 0.
+export function getAICreditsUsed(user: User | null): number {
+  if (!user || user.aiCreditsMonth !== currentMonth()) return 0;
+  return user.aiCreditsUsedThisMonth ?? 0;
+}
+
+export function getCardsGenerated(user: User | null): number {
+  if (!user || user.cardsMonth !== currentMonth()) return 0;
+  return user.cardsGeneratedThisMonth ?? 0;
+}
+
+// Tiers in ascending order of what they unlock.
+const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, premium: 1, team: 2, club: 3 };
+
+export function tierAtLeast(tier: SubscriptionTier, required: SubscriptionTier): boolean {
+  return TIER_RANK[tier] >= TIER_RANK[required];
+}
+
+// Returns null for unlimited.
+export function getAICreditsLeft(user: User | null): number | null {
+  const limit = TIER_LIMITS[user?.subscriptionTier ?? "free"].aiCreditsPerMonth;
+  if (limit === -1) return null;
+  return Math.max(0, limit - getAICreditsUsed(user));
+}
+
 export function canUsePremiumAIStyle(tier: SubscriptionTier): boolean {
   return TIER_LIMITS[tier].premiumAIStyles;
 }
@@ -121,13 +148,14 @@ export function canAddTeam(tier: SubscriptionTier, currentTeamCount: number): bo
 
 export function getUpgradeReason(
   tier: SubscriptionTier,
-  action: "generate" | "ai" | "print" | "premiumStyle" | "player" | "team"
+  action: "generate" | "ai" | "print" | "premiumStyle" | "premiumFeature" | "player" | "team"
 ): string {
   const reasons: Record<string, string> = {
     generate: `Bezplatný plán umožňuje max. ${TIER_LIMITS.free.cardsPerMonth} kartičky měsíčně.`,
     ai: `Bezplatný plán umožňuje max. ${TIER_LIMITS.free.aiCreditsPerMonth} AI kredity měsíčně.`,
     print: "Tisk karet je dostupný od tarifu Premium.",
     premiumStyle: "Prémiové AI styly jsou dostupné od tarifu Premium.",
+    premiumFeature: "Tato AI funkce je dostupná od tarifu Premium.",
     player: `Bezplatný plán umožňuje max. ${TIER_LIMITS.free.maxPlayers} hráče.`,
     team: `Bezplatný plán umožňuje max. ${TIER_LIMITS.free.maxTeams} tým.`,
   };

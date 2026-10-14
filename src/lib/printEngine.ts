@@ -1,6 +1,4 @@
 import { jsPDF } from "jspdf";
-import { updateCard } from "./firebaseServices";
-import type { Card } from "@/types";
 
 export type PrintFormat = "a4-9" | "a4-4" | "sticker" | "album";
 
@@ -111,17 +109,6 @@ const LAYOUTS: Record<PrintFormat, LayoutSpec> = (() => {
   return { "a4-9": spec9, "a4-4": spec4, sticker: specSticker, album: specAlbum };
 })();
 
-async function fetchAsDataUrl(url: string): Promise<string> {
-  const resp = await fetch(url, { mode: "cors" });
-  const blob = await resp.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 function drawCutMark(doc: jsPDF, x: number, y: number, size = 3): void {
   doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.2);
@@ -131,73 +118,41 @@ function drawCutMark(doc: jsPDF, x: number, y: number, size = 3): void {
   doc.line(x, y + 0.5, x, y + size);
 }
 
-export async function exportCardsToPDF(
-  cards: Card[],
-  format: PrintFormat,
-  onProgress?: (pct: number) => void
-): Promise<void> {
+// Lays out already-rendered card images (PNG data URLs, see CardPreview + html-to-image)
+// so printed cards look exactly like the on-screen ones, template included.
+export function exportCardsToPDF(images: string[], format: PrintFormat): void {
   const layout = LAYOUTS[format];
-  const fmt = format === "album" ? "a4" : "a4";
 
   const doc = new jsPDF({
     orientation: layout.pageW > layout.pageH ? "landscape" : "portrait",
     unit: "mm",
-    format: fmt,
+    format: "a4",
   });
 
   const slots = layout.cols * layout.rows;
-  const pages = Math.ceil(cards.length / slots);
+  const pages = Math.ceil(images.length / slots);
 
   for (let page = 0; page < pages; page++) {
     if (page > 0) doc.addPage();
 
-    const pageCards = cards.slice(page * slots, (page + 1) * slots);
+    const pageImages = images.slice(page * slots, (page + 1) * slots);
 
-    for (let i = 0; i < pageCards.length; i++) {
-      const card = pageCards[i];
+    pageImages.forEach((dataUrl, i) => {
       const col = i % layout.cols;
       const row = Math.floor(i / layout.cols);
-
       const x = layout.marginX + col * (layout.cardW + layout.gapX);
       const y = layout.marginY + row * (layout.cardH + layout.gapY);
 
-      const imageUrl = card.imageUrl ?? card.thumbnailUrl;
-      if (imageUrl) {
-        try {
-          const dataUrl = await fetchAsDataUrl(imageUrl);
-          doc.addImage(dataUrl, "PNG", x, y, layout.cardW, layout.cardH);
-        } catch {
-          // Placeholder grey rect if image fetch fails
-          doc.setFillColor(220, 220, 220);
-          doc.rect(x, y, layout.cardW, layout.cardH, "F");
-          doc.setFontSize(6);
-          doc.setTextColor(120);
-          doc.text("Obrázek nedostupný", x + layout.cardW / 2, y + layout.cardH / 2, {
-            align: "center",
-          });
-        }
-      } else {
-        doc.setFillColor(230, 230, 230);
-        doc.rect(x, y, layout.cardW, layout.cardH, "F");
-      }
+      doc.addImage(dataUrl, "PNG", x, y, layout.cardW, layout.cardH);
 
-      // Cut marks at all 4 corners
       if (layout.cutMarks) {
         drawCutMark(doc, x, y);
         drawCutMark(doc, x + layout.cardW, y);
         drawCutMark(doc, x, y + layout.cardH);
         drawCutMark(doc, x + layout.cardW, y + layout.cardH);
       }
-
-      onProgress?.(Math.round(((page * slots + i + 1) / (pages * slots)) * 100));
-    }
+    });
   }
 
-  // Increment printCount for each card
-  await Promise.allSettled(
-    cards.map((c) => updateCard(c.id, { printCount: (c.printCount ?? 0) + 1 } as never))
-  );
-
-  const filename = `karticky-${format}-${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(filename);
+  doc.save(`karticky-${format}-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

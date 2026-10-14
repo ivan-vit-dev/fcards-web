@@ -35,7 +35,12 @@ export default function NewTeamPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-xl font-display font-bold">Nový tým</h1>
+        <div>
+          <h1 className="text-xl font-display font-bold">Nový tým</h1>
+          <p className="text-sm text-muted-foreground">
+            Po vytvoření do týmu přidáte hráče a zápasy.
+          </p>
+        </div>
       </div>
       <div className="bg-card border border-border rounded-2xl p-6">
         <TeamForm onSubmit={handleSubmit} />

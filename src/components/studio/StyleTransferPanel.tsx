@@ -10,6 +10,8 @@ import type { AIStyle } from "@/types";
 interface Props {
   cardId: string;
   currentImageUrl?: string;
+  premiumAllowed: boolean;
+  onPremiumRequired: () => void;
   onComplete: (imageUrl: string) => void;
 }
 
@@ -23,17 +25,35 @@ const STYLES: { value: AIStyle; labelCs: string; emoji: string; tier: "free" | "
   { value: "superhero",  labelCs: "Superhrdina",    emoji: "🦸", tier: "premium" },
 ];
 
-export function StyleTransferPanel({ cardId, currentImageUrl, onComplete }: Props) {
+export function StyleTransferPanel({
+  cardId,
+  currentImageUrl,
+  premiumAllowed,
+  onPremiumRequired,
+  onComplete,
+}: Props) {
   const { status, imageUrl, isRunning, callFunction } = useAIGeneration();
   const [selectedStyle, setSelectedStyle] = useState<AIStyle>("fifa");
 
+  const handleSelect = (style: (typeof STYLES)[number]) => {
+    if (style.tier === "premium" && !premiumAllowed) {
+      onPremiumRequired();
+      return;
+    }
+    setSelectedStyle(style.value);
+  };
+
   const handleApply = async () => {
     if (!currentImageUrl) return;
-    await callFunction(
-      "applyAIStyle",
-      { cardId, imageUrl: currentImageUrl, style: selectedStyle },
-      cardId
-    );
+    try {
+      await callFunction("applyAIStyle", {
+        cardId,
+        imageUrl: currentImageUrl,
+        style: selectedStyle,
+      });
+    } catch {
+      // useAIGeneration already shows the error toast
+    }
   };
 
   if (imageUrl && status === "done") {
@@ -44,7 +64,7 @@ export function StyleTransferPanel({ cardId, currentImageUrl, onComplete }: Prop
           <img src={imageUrl} alt="Styled card" className="w-full max-h-80 object-contain" />
         </div>
         <Button className="w-full" onClick={() => onComplete(imageUrl)}>
-          Použít tento styl
+          Hotovo
         </Button>
       </div>
     );
@@ -65,21 +85,21 @@ export function StyleTransferPanel({ cardId, currentImageUrl, onComplete }: Prop
     <div className="space-y-5">
       {!currentImageUrl && (
         <div className="p-4 bg-muted/60 rounded-xl text-sm text-muted-foreground text-center">
-          Nejprve nahrajte fotografii nebo exportujte kartičku.
+          Kartička ani hráč zatím nemají fotku. Nahrajte ji přes „Odstranění pozadí“.
         </div>
       )}
 
-      {/* Style grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {STYLES.map((s) => (
           <button
             key={s.value}
-            onClick={() => setSelectedStyle(s.value)}
+            onClick={() => handleSelect(s)}
             className={cn(
               "flex flex-col items-center gap-1.5 p-3 rounded-xl border text-sm transition-colors",
               selectedStyle === s.value
                 ? "border-primary bg-primary/10 text-foreground"
-                : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
+              s.tier === "premium" && !premiumAllowed && "opacity-60"
             )}
           >
             <span className="text-2xl">{s.emoji}</span>

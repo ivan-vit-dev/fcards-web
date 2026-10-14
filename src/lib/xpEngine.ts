@@ -1,22 +1,5 @@
-import { getLevelFromXP } from "@/lib/utils";
-import { updateUserDoc } from "@/lib/firebaseServices";
-
-// ─── XP event rewards ─────────────────────────────────────────────────────────
-
-export const XP_EVENTS = {
-  CREATE_CARD: 50,
-  SHARE_CARD: 25,
-  COMPLETE_MATCH_STATS: 100,
-  RECEIVE_MVP: 200,
-  COMPLETE_SEASON: 500,
-  UNLOCK_ACHIEVEMENT_COMMON: 50,
-  UNLOCK_ACHIEVEMENT_UNCOMMON: 100,
-  UNLOCK_ACHIEVEMENT_RARE: 150,
-  UNLOCK_ACHIEVEMENT_EPIC: 250,
-  UNLOCK_ACHIEVEMENT_LEGENDARY: 500,
-} as const;
-
-export type XPEvent = keyof typeof XP_EVENTS;
+// XP itself is computed server-side by the syncProgress Cloud Function
+// (50 per card, 100 per match played, 200 per MVP, plus achievement rewards).
 
 // ─── Level-based unlockables ──────────────────────────────────────────────────
 
@@ -44,21 +27,4 @@ export function getUnlockables(level: number): LevelUnlock[] {
 
 export function getNextUnlock(level: number): LevelUnlock | null {
   return LEVEL_UNLOCKS.find((u) => u.level > level) ?? null;
-}
-
-// ─── Add XP to user ───────────────────────────────────────────────────────────
-
-export async function addXP(
-  uid: string,
-  amount: number,
-  currentXP: number
-): Promise<{ newXP: number; leveledUp: boolean; newLevel: number }> {
-  const oldLevel = getLevelFromXP(currentXP);
-  const newXP = currentXP + amount;
-  const newLevel = getLevelFromXP(newXP);
-  const leveledUp = newLevel > oldLevel;
-
-  await updateUserDoc(uid, { xp: newXP, level: newLevel });
-
-  return { newXP, leveledUp, newLevel };
 }

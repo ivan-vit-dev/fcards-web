@@ -7,6 +7,7 @@ import { useAchievementsStore } from "@/store/appStore";
 import { getAchievements, getUserAchievements } from "@/lib/firebaseServices";
 import { AchievementCard } from "@/components/achievements/AchievementCard";
 import { XPBar } from "@/components/achievements/XPBar";
+import { useSyncProgress } from "@/hooks/use-progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Achievement, UserAchievement } from "@/types";
@@ -30,17 +31,27 @@ export default function AchievementsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterTab>("all");
 
+  const syncProgress = useSyncProgress();
+  const uid = user?.uid;
+
   useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      achievements.length ? Promise.resolve(achievements) : getAchievements(),
-      getUserAchievements(user.uid),
-    ]).then(([all, userAch]) => {
-      setAchievements(all);
-      setUnlockedIds(userAch.map((ua) => ua.achievementId));
-      setUserAchievements(userAch);
-    }).finally(() => setLoading(false));
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!uid) return;
+    // Sync first so anything just earned is already unlocked when the list loads.
+    syncProgress()
+      .then(() =>
+        Promise.all([
+          achievements.length ? Promise.resolve(achievements) : getAchievements(),
+          getUserAchievements(uid),
+        ])
+      )
+      .then(([all, userAch]) => {
+        setAchievements(all);
+        setUnlockedIds(userAch.map((ua) => ua.achievementId));
+        setUserAchievements(userAch);
+      })
+      .catch((err) => console.warn("[AchievementsPage]", err))
+      .finally(() => setLoading(false));
+  }, [uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const unlockedSet = new Set(unlockedIds);
 

@@ -45,9 +45,9 @@ export function getRarityColor(rarity: Rarity): string {
   return colors[rarity];
 }
 
-/** XP threshold for a given level: floor(250 * N^1.6) */
+/** XP threshold for a given level: floor(250 * N^1.6); level 1 starts at 0. Mirrored in functions/src/index.ts. */
 export function getXPForLevel(level: number): number {
-  return Math.floor(250 * Math.pow(level, 1.6));
+  return level <= 1 ? 0 : Math.floor(250 * Math.pow(level, 1.6));
 }
 
 /** Derives current level from total XP accumulated */

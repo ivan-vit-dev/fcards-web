@@ -36,7 +36,12 @@ export default function NewMatchPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-xl font-display font-bold">Nový zápas</h1>
+        <div>
+          <h1 className="text-xl font-display font-bold">Nový zápas</h1>
+          <p className="text-sm text-muted-foreground">
+            Zapište výsledek. Statistiky hráčů doplníte v dalším kroku.
+          </p>
+        </div>
       </div>
       <div className="bg-card border border-border rounded-2xl p-6">
         <MatchForm onSubmit={handleSubmit} />

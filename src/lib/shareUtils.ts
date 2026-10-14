@@ -1,4 +1,4 @@
-import { updateCard } from "./firebaseServices";
+import { incrementCardShareCount } from "./firebaseServices";
 
 export function getCardShareUrl(shareSlug: string, locale = "cs"): string {
   const base =
@@ -28,6 +28,6 @@ export function buildMessengerShareUrl(url: string): string {
   return `https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&app_id=&redirect_uri=${encodeURIComponent(url)}`;
 }
 
-export async function incrementShareCount(cardId: string, currentCount: number): Promise<void> {
-  await updateCard(cardId, { shareCount: currentCount + 1 } as never);
+export async function incrementShareCount(cardId: string): Promise<void> {
+  await incrementCardShareCount(cardId);
 }

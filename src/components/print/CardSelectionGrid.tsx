@@ -4,16 +4,17 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
 import { cn } from "@/lib/utils";
-import type { Card } from "@/types";
+import type { Card, Player } from "@/types";
 
 interface Props {
   cards: Card[];
+  players: Player[];
   selected: Set<string>;
   maxSelectable: number;
   onToggle: (cardId: string) => void;
 }
 
-export function CardSelectionGrid({ cards, selected, maxSelectable, onToggle }: Props) {
+export function CardSelectionGrid({ cards, players, selected, maxSelectable, onToggle }: Props) {
   if (cards.length === 0) {
     return (
       <div className="text-center py-12 text-sm text-muted-foreground">
@@ -57,7 +58,11 @@ export function CardSelectionGrid({ cards, selected, maxSelectable, onToggle }: 
                 )}
               </div>
 
-              <CardPreview card={card} size="sm" />
+              <CardPreview
+                card={card}
+                player={players.find((p) => p.id === card.playerId)}
+                size="sm"
+              />
 
               <div className="px-0.5 pb-0.5">
                 <RarityBadge rarity={card.rarity} />

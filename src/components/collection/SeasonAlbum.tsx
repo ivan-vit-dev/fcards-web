@@ -8,6 +8,7 @@ import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
 import { CardHologramEffect } from "./CardHologramEffect";
 import { BookOpen } from "lucide-react";
+import { usePlayersStore } from "@/store/appStore";
 
 interface Props {
   cards: Card[];
@@ -16,6 +17,7 @@ interface Props {
 export function SeasonAlbum({ cards }: Props) {
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
+  const players = usePlayersStore((s) => s.players);
 
   const grouped = cards.reduce<Record<string, Card[]>>((acc, card) => {
     const season = card.season ?? "Bez sezóny";
@@ -47,16 +49,17 @@ export function SeasonAlbum({ cards }: Props) {
               </span>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
               {seasonCards.map((card) => (
                 <Link key={card.id} href={`/${locale}/cards/${card.id}`}>
                   <div className="group space-y-1">
-                    <div className="relative">
+                    <div className="relative w-fit mx-auto">
                       <CardPreview
                         card={card}
+                        player={players.find((p) => p.id === card.playerId)}
                         size="sm"
                         className={cn(
-                          "w-full transition-transform duration-200 group-hover:scale-[1.04]",
+                          "transition-transform duration-200 group-hover:scale-[1.04]",
                           (card.rarity === "legendary" || card.rarity === "mythic") &&
                             "shadow-card-legendary"
                         )}

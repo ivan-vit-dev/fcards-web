@@ -11,6 +11,7 @@ import {
   Pencil,
   Globe,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -88,11 +89,20 @@ export default function CardDetailPage() {
   const handleShare = async () => {
     if (!card) return;
     const url = `${window.location.origin}/${locale}/card/${card.shareSlug}`;
-    if (navigator.share) {
-      await navigator.share({ title: "Fotbalová kartička", url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success("Odkaz zkopírován!");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Fotbalová kartička", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Odkaz zkopírován!");
+      }
+      if (!card.isPublic) {
+        toast("Kartička je soukromá — odkaz začne fungovat až ji zveřejníte.", { icon: "🔒" });
+      }
+    } catch (err) {
+      if ((err as { name?: string }).name !== "AbortError") {
+        toast.error("Sdílení se nepodařilo.");
+      }
     }
   };
 
@@ -156,6 +166,11 @@ export default function CardDetailPage() {
               </Button>
             </Link>
           )}
+          <Link href={`/${locale}/studio?cardId=${card.id}`} title="AI Studio">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Sparkles className="h-4 w-4" />
+            </Button>
+          </Link>
           <Link href={`/${locale}/cards/${card.id}/edit`}>
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <Pencil className="h-4 w-4" />
@@ -235,6 +250,17 @@ export default function CardDetailPage() {
                     </div>
                   ))}
               </div>
+            </div>
+          )}
+
+          {card.aiStory && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-2">
+                Příběh kartičky
+              </p>
+              <blockquote className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 text-sm leading-relaxed">
+                {card.aiStory}
+              </blockquote>
             </div>
           )}
 

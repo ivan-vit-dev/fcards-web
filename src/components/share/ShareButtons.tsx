@@ -9,6 +9,7 @@ interface Props {
   card: Card;
   locale?: string;
   playerName?: string;
+  captureNode?: () => HTMLElement | null;
 }
 
 function FacebookIcon({ className }: { className?: string }) {
@@ -27,8 +28,8 @@ function TikTokIcon({ className }: { className?: string }) {
   );
 }
 
-export function ShareButtons({ card, locale, playerName }: Props) {
-  const { share, sharing } = useShare({ card, locale, playerName });
+export function ShareButtons({ card, locale, playerName, captureNode }: Props) {
+  const { share, sharing } = useShare({ card, locale, playerName, captureNode });
 
   return (
     <div className="space-y-3">

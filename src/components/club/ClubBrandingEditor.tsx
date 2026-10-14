@@ -14,6 +14,8 @@ import { Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Club } from "@/types";
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
 interface Props {
   club: Club;
   onUpdate: (data: Partial<Club>) => Promise<void>;
@@ -31,12 +33,17 @@ export function ClubBrandingEditor({ club, onUpdate }: Props) {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Soubor musí být obrázek");
+    const resetInput = () => {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast.error("Logo musí být obrázek ve formátu PNG, JPG nebo WebP.");
+      resetInput();
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Logo musí být menší než 5 MB");
+      toast.error("Logo musí být menší než 5 MB.");
+      resetInput();
       return;
     }
 
@@ -54,21 +61,32 @@ export function ClubBrandingEditor({ club, onUpdate }: Props) {
           Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
         ),
       () => {
-        toast.error("Upload selhal");
-        setUploading(false);
-      },
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        await onUpdate({ logoURL: url });
-        toast.success("Logo bylo nahráno");
+        toast.error("Logo se nepodařilo nahrát. Zkuste to prosím znovu.");
         setUploading(false);
         setUploadProgress(0);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        resetInput();
+      },
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          await onUpdate({ logoURL: url });
+          toast.success("Logo bylo nahráno.");
+        } catch (err) {
+          console.warn("[ClubBrandingEditor] logo", err);
+          toast.error("Logo se nepodařilo uložit. Zkuste to prosím znovu.");
+        } finally {
+          setUploading(false);
+          setUploadProgress(0);
+          resetInput();
+        }
       }
     );
   };
 
+  const colorValid = HEX_COLOR.test(primaryColor);
+
   const handleSaveColor = async () => {
+    if (!colorValid) return;
     setSavingColor(true);
     try {
       await onUpdate({ primaryColor });
@@ -115,7 +133,7 @@ export function ClubBrandingEditor({ club, onUpdate }: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={handleLogoUpload}
         />
@@ -123,27 +141,35 @@ export function ClubBrandingEditor({ club, onUpdate }: Props) {
 
       {/* Color picker */}
       <div className="space-y-3">
-        <Label>Hlavní barva klubu</Label>
+        <Label htmlFor="club-color">Hlavní barva klubu</Label>
         <div className="flex items-center gap-3">
           <input
             type="color"
-            value={primaryColor}
+            value={colorValid ? primaryColor : "#d97706"}
             onChange={(e) => setPrimaryColor(e.target.value)}
+            aria-label="Vybrat barvu"
             className="h-10 w-12 rounded cursor-pointer border border-border bg-transparent p-0.5"
           />
           <Input
+            id="club-color"
             value={primaryColor}
-            onChange={(e) => setPrimaryColor(e.target.value)}
+            onChange={(e) => setPrimaryColor(e.target.value.trim())}
             placeholder="#d97706"
             className="w-32 font-mono text-sm"
             maxLength={7}
-          />
-          <div
-            className="h-10 w-10 rounded-lg border border-border shadow-sm shrink-0"
-            style={{ background: primaryColor }}
+            aria-invalid={!colorValid}
+            aria-describedby="club-color-help"
           />
         </div>
-        <Button size="sm" onClick={handleSaveColor} disabled={savingColor}>
+        <p
+          id="club-color-help"
+          className={colorValid ? "text-xs text-muted-foreground" : "text-xs text-destructive"}
+        >
+          {colorValid
+            ? "Vyberte barvu nebo zadejte kód ve tvaru #RRGGBB."
+            : "Zadejte barvu ve tvaru #RRGGBB, např. #d97706."}
+        </p>
+        <Button size="sm" onClick={handleSaveColor} disabled={savingColor || !colorValid}>
           {savingColor ? "Ukládám…" : "Uložit barvu"}
         </Button>
       </div>
@@ -153,7 +179,7 @@ export function ClubBrandingEditor({ club, onUpdate }: Props) {
         <Label>Náhled brandingu</Label>
         <div
           className="rounded-xl p-4 flex items-center gap-3 text-white shadow-md"
-          style={{ background: primaryColor }}
+          style={{ background: colorValid ? primaryColor : club.primaryColor ?? "#d97706" }}
         >
           <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
             {club.logoURL ? (

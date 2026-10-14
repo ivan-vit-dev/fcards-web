@@ -12,10 +12,12 @@ import { usePlayersStore } from "@/store/appStore";
 import {
   getMatchDoc,
   getPlayerMatchStats,
-  setPlayerMatchStats,
+  saveMatchStats,
   getPlayers,
+  getPlayerDoc,
 } from "@/lib/firebaseServices";
 import type { Match, PlayerMatchStats } from "@/types";
+import { useSyncProgress } from "@/hooks/use-progress";
 import toast from "react-hot-toast";
 
 const resultLabel: Record<string, string> = {
@@ -32,7 +34,8 @@ const resultClass: Record<string, string> = {
 
 export default function MatchDetailPage() {
   const { user } = useAuthStore();
-  const { players, setPlayers } = usePlayersStore();
+  const { players, setPlayers, updatePlayer } = usePlayersStore();
+  const syncProgress = useSyncProgress();
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
   const teamId = params?.teamId as string;
@@ -68,16 +71,28 @@ export default function MatchDetailPage() {
   ) => {
     if (!user) return;
     try {
-      await setPlayerMatchStats(matchId, playerId, data);
+      await saveMatchStats(user.uid, matchId, playerId, data);
       setStatsMap((prev) => ({
         ...prev,
-        [playerId]: { id: playerId, ...data } as PlayerMatchStats,
+        [playerId]: { ...prev[playerId], id: playerId, ...data } as PlayerMatchStats,
       }));
       toast.success("Statistiky uloženy.");
-    } catch {
-      toast.error("Nepodařilo se uložit statistiky.");
+      void syncProgress();
+      // Career totals changed on the server; refresh this player so other pages show them.
+      getPlayerDoc(user.uid, playerId)
+        .then((fresh) => fresh && updatePlayer(playerId, fresh))
+        .catch(() => {});
+    } catch (err) {
+      console.warn("[MatchDetailPage] saveMatchStats", err);
+      toast.error("Statistiky se nepodařilo uložit. Zkuste to prosím znovu.");
+      throw err;
     }
   };
+
+  const teamGoals = match ? (match.isHome ? match.homeScore : match.awayScore) : 0;
+  const conceded = match ? (match.isHome ? match.awayScore : match.homeScore) : 0;
+  const mvpOwnerId = Object.values(statsMap).find((s) => s.isMVP)?.playerId;
+  const mvpOwnerName = players.find((p) => p.id === mvpOwnerId)?.displayName;
 
   if (loading) {
     return (
@@ -165,6 +180,11 @@ export default function MatchDetailPage() {
                 matchId={matchId}
                 userId={user!.uid}
                 existingStats={statsMap[player.id]}
+                match={{
+                  teamGoals,
+                  conceded,
+                  mvpTakenBy: mvpOwnerId && mvpOwnerId !== player.id ? mvpOwnerName : undefined,
+                }}
                 onSubmit={handleStatsSubmit}
               />
             ))}

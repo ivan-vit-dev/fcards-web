@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import {
   CreditCard,
@@ -14,7 +15,10 @@ import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/store/authStore";
 import { useCardsStore } from "@/store/appStore";
 import { getXPToNextLevel, getLevelTier } from "@/lib/utils";
+import { getAICreditsLeft, getCardsGenerated } from "@/lib/subscriptionEngine";
 import { useParams } from "next/navigation";
+import { getCards } from "@/lib/firebaseServices";
+import { useSyncProgress } from "@/hooks/use-progress";
 
 const quickActions = [
   {
@@ -52,9 +56,19 @@ const tierLabelMap: Record<string, string> = {
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const { cards } = useCardsStore();
+  const { cards, setCards } = useCardsStore();
   const params = useParams();
   const locale = (params?.locale as string) ?? "cs";
+  const syncProgress = useSyncProgress();
+  const uid = user?.uid;
+
+  useEffect(() => {
+    if (!uid) return;
+    getCards(uid)
+      .then(setCards)
+      .catch((err) => console.warn("[Dashboard] getCards", err));
+    void syncProgress();
+  }, [uid, setCards, syncProgress]);
 
   const xpInfo = user ? getXPToNextLevel(user.xp) : null;
   const tier = user ? getLevelTier(user.level) : "bronze";
@@ -169,8 +183,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Kartičky celkem", value: cards.length, icon: CreditCard },
-          { label: "Kartičky tento měsíc", value: user?.cardsGeneratedThisMonth ?? 0, icon: TrendingUp },
-          { label: "AI kredity zbývají", value: user ? (50 - (user.aiCreditsUsedThisMonth ?? 0)) : 0, icon: Sparkles },
+          { label: "Kartičky tento měsíc", value: getCardsGenerated(user), icon: TrendingUp },
+          { label: "AI kredity zbývají", value: user?.role === "superAdmin" ? "∞" : (getAICreditsLeft(user) ?? "∞"), icon: Sparkles },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="bg-card border border-border rounded-xl p-4 text-center space-y-1">
             <Icon className="h-4 w-4 text-muted-foreground mx-auto" />
