@@ -13,9 +13,17 @@ interface PhotoUploadProps {
   currentPhotoURL?: string;
   displayName?: string;
   onUpload: (url: string) => void;
+  /** Button texts — e.g. "Nahrát logo" when used for a team crest. */
+  labels?: { upload: string; change: string };
 }
 
-export function PhotoUpload({ userId, currentPhotoURL, displayName, onUpload }: PhotoUploadProps) {
+export function PhotoUpload({
+  userId,
+  currentPhotoURL,
+  displayName,
+  onUpload,
+  labels = { upload: "Nahrát foto", change: "Změnit foto" },
+}: PhotoUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | undefined>(currentPhotoURL);
   const [uploading, setUploading] = useState(false);
@@ -73,7 +81,7 @@ export function PhotoUpload({ userId, currentPhotoURL, displayName, onUpload }: 
         disabled={uploading}
       >
         <Camera className="h-3.5 w-3.5" />
-        {preview ? "Změnit foto" : "Nahrát foto"}
+        {preview ? labels.change : labels.upload}
       </Button>
       <p className="text-xs text-muted-foreground">Nepovinné · JPG, PNG nebo WebP, max. 5 MB</p>
       <input

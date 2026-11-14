@@ -5,12 +5,18 @@ import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import {
+  AURAS,
   FINISHES,
   FRAMES,
   LAYOUTS,
+  NAME_STYLES,
   PALETTES,
   PATTERNS,
+  PHOTO_FILTERS,
   SHAPES,
+  type AuraId,
+  type NameStyleId,
+  type PhotoFilterId,
   paletteFromColors,
   resolvePalette,
   shapeClipPath,
@@ -227,6 +233,61 @@ export function DesignBuilder({ card, player, design, locked, locale, onChange }
           })}
         </div>
       </Section>
+
+      <Section title="Záře kolem kartičky" hint="Světlo nebo kouř přesahující okraj — jen na obrazovce, do tisku se nedostane.">
+        <ChipRow
+          options={Object.entries(AURAS).map(([id, a]) => ({ id, label: a.nameCs }))}
+          value={design.aura ?? "none"}
+          onPick={(id) => onChange({ aura: id as AuraId })}
+        />
+      </Section>
+
+      <Section title="Fotka hráče">
+        <ChipRow
+          options={Object.entries(PHOTO_FILTERS).map(([id, f]) => ({ id, label: f.nameCs }))}
+          value={design.photoFilter ?? "none"}
+          onPick={(id) => onChange({ photoFilter: id as PhotoFilterId })}
+        />
+      </Section>
+
+      <Section title="Styl jména" hint="Podpis se hodí ke kartám legend, obrys k neonovým.">
+        <ChipRow
+          options={Object.entries(NAME_STYLES).map(([id, s]) => ({ id, label: s.nameCs }))}
+          value={design.nameStyle ?? "block"}
+          onPick={(id) => onChange({ nameStyle: id as NameStyleId })}
+        />
+      </Section>
+    </div>
+  );
+}
+
+function ChipRow({
+  options,
+  value,
+  onPick,
+}: {
+  options: { id: string; label: string }[];
+  value: string;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          aria-pressed={value === o.id}
+          onClick={() => onPick(o.id)}
+          className={cn(
+            "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+            value === o.id
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

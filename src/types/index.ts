@@ -98,6 +98,7 @@ export interface Player {
   slug: string;
   position: PlayerPosition;
   jerseyNumber?: number;
+  nationality?: string; // country code from components/card/Flag.tsx (e.g. "CZ"); cards default to CZ
   dateOfBirth?: string;
   photoURL?: string;
   teamId?: string;
@@ -186,6 +187,9 @@ export interface Card {
   userId: string;
   playerId: string;
   playerName?: string; // snapshot for viewers who can't read a private player doc
+  nationality?: string; // snapshot of the player's country for the flag on the card
+  team?: CardTeam; // snapshot of the player's team for the crest on the card
+  badges?: CardBadges; // flag/crest visibility + placement; absent = shown in the layout's default spot
   cardType: CardType;
   rarity: Rarity;
   templateId: string;
@@ -213,6 +217,23 @@ export interface Card {
   updatedAt: Timestamp;
 }
 
+export type BadgePlacementId = "bottom" | "rating" | "topRight" | "photo";
+export type FlagShapeId = "rect" | "rounded" | "circle" | "square" | "shield" | "hexagon" | "wave" | "pennant";
+
+/** Whether and where the card shows the nationality flag and the club crest. */
+export interface CardBadges {
+  flag: boolean;
+  crest: boolean;
+  placement: BadgePlacementId;
+  flagShape?: FlagShapeId;
+}
+
+export interface CardTeam {
+  name: string;
+  logoUrl?: string;
+  color?: string; // hex; crest colour when there is no logo
+}
+
 export interface PhotoVersion {
   url: string;
   label: string; // e.g. "Originál", "Bez pozadí", "Oslava gólu"
@@ -222,7 +243,7 @@ export interface PhotoVersion {
 
 // ─── Card design (see lib/cardDesign.ts for the catalogue) ────────────────────
 
-export type ShapeId = "classic" | "elite" | "shard" | "bevel";
+export type ShapeId = "classic" | "elite" | "shard" | "bevel" | "fut" | "crown" | "pillar" | "torn";
 export type FrameId =
   | "gold"
   | "silver"
@@ -233,11 +254,37 @@ export type FrameId =
   | "ice"
   | "rosegold"
   | "team"
-  | "line";
-export type LayoutId = "classic" | "pro" | "sticker" | "fullbleed" | "sidebar" | "minimal";
+  | "line"
+  | "doublegold"
+  | "doublesilver"
+  | "neonline"
+  | "paper";
+export type LayoutId = "fc" | "classic" | "pro" | "sticker" | "fullbleed" | "sidebar" | "minimal";
 /** Face background. */
-export type PatternId = "clean" | "mesh" | "beams" | "facets" | "number" | "lava" | "spiral" | "smoke";
+export type PatternId =
+  | "clean"
+  | "mesh"
+  | "beams"
+  | "facets"
+  | "number"
+  | "lava"
+  | "spiral"
+  | "smoke"
+  | "marble"
+  | "ribbons"
+  | "streaks"
+  | "crystal"
+  | "neonburst"
+  | "swirl"
+  | "flames"
+  | "grunge"
+  | "cosmos"
+  | "explosion";
 export type FinishId = "none" | "gloss" | "refractor" | "prizm" | "shimmer" | "goldglint" | "speckle";
+/** Light/smoke that spills outside the card on screen (not printed). */
+export type AuraId = "none" | "glow" | "smoke" | "fire";
+export type PhotoFilterId = "none" | "mono" | "warm" | "duo";
+export type NameStyleId = "block" | "signature" | "outline";
 
 export interface CardDesign {
   shape: ShapeId;
@@ -249,6 +296,9 @@ export interface CardDesign {
   finish: FinishId;
   /** Player breaks out of the photo window (needs a background-removed photo). */
   popOut?: boolean;
+  aura?: AuraId;
+  photoFilter?: PhotoFilterId;
+  nameStyle?: NameStyleId;
 }
 
 // ─── Template ─────────────────────────────────────────────────────────────────

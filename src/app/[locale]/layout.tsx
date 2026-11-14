@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { Inter, Oswald } from "next/font/google";
+import { Great_Vibes, Inter, Oswald } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Toaster } from "react-hot-toast";
@@ -12,6 +12,8 @@ import "@/app/globals.css";
 
 const inter = Inter({ variable: "--font-sans", subsets: ["latin"] });
 const oswald = Oswald({ variable: "--font-display", subsets: ["latin"] });
+// Handwritten "signature" names on icon-style cards; latin-ext covers Czech diacritics.
+const greatVibes = Great_Vibes({ variable: "--font-script", weight: "400", subsets: ["latin", "latin-ext"] });
 
 export const metadata: Metadata = {
   title: {
@@ -60,7 +62,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={`${inter.variable} ${oswald.variable} h-full antialiased`}
+      className={`${inter.variable} ${oswald.variable} ${greatVibes.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">

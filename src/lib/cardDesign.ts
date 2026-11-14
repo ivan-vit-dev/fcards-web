@@ -6,17 +6,22 @@
 // Everything is plain data/CSS so a design renders identically on screen, in PNG and in print.
 
 import type {
+  AuraId,
+  BadgePlacementId,
   Card,
+  CardBadges,
   CardDesign,
   FinishId,
   FrameId,
   LayoutId,
+  NameStyleId,
   PatternId,
+  PhotoFilterId,
   ShapeId,
   SubscriptionTier,
 } from "@/types";
 
-export type { CardDesign, FinishId, FrameId, LayoutId, PatternId, ShapeId };
+export type { AuraId, CardDesign, FinishId, FrameId, LayoutId, NameStyleId, PatternId, PhotoFilterId, ShapeId };
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
 
@@ -166,6 +171,88 @@ export const PALETTES: Record<string, Palette> = {
     text: "oklch(0.98 0.01 70)",
     muted: "oklch(0.88 0.04 65)",
   },
+  // Inspired by current game promo editions
+  copper: {
+    nameCs: "Měď",
+    bg1: "oklch(0.42 0.08 45)",
+    bg2: "oklch(0.16 0.02 40)",
+    accent: "oklch(0.9 0.09 80)",
+    accent2: "oklch(0.68 0.16 45)",
+    text: "oklch(0.97 0.02 75)",
+    muted: "oklch(0.8 0.05 60)",
+  },
+  scream: {
+    nameCs: "Scream",
+    bg1: "oklch(0.62 0.19 45)",
+    bg2: "oklch(0.3 0.12 30)",
+    accent: "oklch(0.97 0.04 80)",
+    accent2: "oklch(0.6 0.22 315)",
+    text: "oklch(0.99 0.01 80)",
+    muted: "oklch(0.9 0.05 60)",
+  },
+  ghost: {
+    nameCs: "Přízrak",
+    bg1: "oklch(0.3 0.09 240)",
+    bg2: "oklch(0.13 0.05 250)",
+    accent: "oklch(0.95 0.05 160)",
+    accent2: "oklch(0.78 0.22 145)",
+    text: "oklch(0.98 0.02 160)",
+    muted: "oklch(0.8 0.06 200)",
+  },
+  futurestars: {
+    nameCs: "Budoucí hvězdy",
+    bg1: "oklch(0.32 0.14 295)",
+    bg2: "oklch(0.12 0.06 285)",
+    accent: "oklch(0.98 0.01 300)",
+    accent2: "oklch(0.8 0.12 220)",
+    text: "oklch(0.98 0.01 300)",
+    muted: "oklch(0.82 0.06 290)",
+  },
+  hero: {
+    nameCs: "Hrdina",
+    bg1: "oklch(0.26 0.08 265)",
+    bg2: "oklch(0.12 0.04 270)",
+    accent: "oklch(0.86 0.15 90)",
+    accent2: "oklch(0.7 0.2 320)",
+    text: "oklch(0.98 0.01 260)",
+    muted: "oklch(0.86 0.12 90)",
+  },
+  grunge: {
+    nameCs: "Grunge",
+    bg1: "oklch(0.5 0.005 250)",
+    bg2: "oklch(0.18 0.005 250)",
+    accent: "oklch(0.97 0 0)",
+    accent2: "oklch(0.55 0.2 25)",
+    text: "oklch(0.98 0 0)",
+    muted: "oklch(0.82 0 0)",
+  },
+  trailblazer: {
+    nameCs: "Průkopník",
+    bg1: "oklch(0.42 0.08 200)",
+    bg2: "oklch(0.18 0.05 215)",
+    accent: "oklch(0.97 0.03 90)",
+    accent2: "oklch(0.75 0.17 60)",
+    text: "oklch(0.98 0.01 200)",
+    muted: "oklch(0.84 0.04 200)",
+  },
+  amethyst: {
+    nameCs: "Ametyst",
+    bg1: "oklch(0.38 0.16 300)",
+    bg2: "oklch(0.16 0.08 295)",
+    accent: "oklch(0.94 0.06 95)",
+    accent2: "oklch(0.75 0.12 310)",
+    text: "oklch(0.98 0.01 300)",
+    muted: "oklch(0.84 0.05 300)",
+  },
+  flashback: {
+    nameCs: "Flashback",
+    bg1: "oklch(0.2 0.02 200)",
+    bg2: "oklch(0.08 0.01 200)",
+    accent: "oklch(0.85 0.15 185)",
+    accent2: "oklch(0.65 0.24 25)",
+    text: "oklch(0.98 0 0)",
+    muted: "oklch(0.8 0.02 200)",
+  },
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -189,7 +276,7 @@ export function paletteFromColors(primary: string, secondary: string): Palette {
     bg1: p,
     bg2: `color-mix(in oklch, ${p} 45%, black)`,
     accent: s,
-    accent2: `color-mix(in oklch, ${s} 55%, ${p})`,
+    accent2: s, // plain colour: it is also used inside SVG backgrounds
     text: light ? "oklch(0.2 0 0)" : "oklch(0.98 0 0)",
     muted: light ? "oklch(0.4 0 0)" : "oklch(0.85 0 0)",
   };
@@ -207,6 +294,82 @@ export function resolvePalette(design: CardDesign): Palette {
 // percentages for CSS clip-path and fractions for the print cut line.
 
 type Pt = [number, number];
+
+function arc(cx: number, cy: number, rx: number, ry: number, from: number, to: number, steps = 10): Pt[] {
+  const pts: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const a = ((from + ((to - from) * i) / steps) * Math.PI) / 180;
+    pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+  }
+  return pts;
+}
+
+// Game-promo silhouette: shoulders, two little peaks and a V notch on top, shield point below.
+// `inset` narrows the body (used by "pillar", whose side columns sit outside it).
+function CROWN_TOP_AND_SHIELD(inset: number): Pt[] {
+  const l = inset;
+  const r = 100 - inset;
+  const w = r - l;
+  const x = (f: number) => l + f * w;
+  return [
+    // top edge, left → right (13 points)
+    [l, 9],
+    [x(0.08), 4],
+    [x(0.3), 4],
+    [x(0.35), 0.5],
+    [x(0.41), 3],
+    [x(0.5), 7],
+    [x(0.59), 3],
+    [x(0.65), 0.5],
+    [x(0.7), 4],
+    [x(0.92), 4],
+    [r, 9],
+    [r, 16],
+    [r, 22],
+    // right side down and shield bottom, right → left
+    [r, 124],
+    [x(0.92), 130],
+    [x(0.6), 132],
+    [x(0.5), 140],
+    [x(0.4), 132],
+    [x(0.08), 130],
+    [l, 124],
+  ];
+}
+
+// Deterministic jagged "torn paper" outline: walk the card edge and bite in by a seeded
+// random amount, with the odd deeper tear — same shape every render, so print matches screen.
+function tornOutline(): Pt[] {
+  let seed = 7;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const bite = () => (rand() < 0.12 ? 2.4 + rand() * 2 : rand() * 1.6);
+  const pts: Pt[] = [];
+  const base: Pt[] = [
+    [0, 4],
+    [100, 4],
+    [100, 124],
+    [50, 140],
+    [0, 124],
+  ];
+  for (let s = 0; s < base.length; s++) {
+    const [ax, ay] = base[s];
+    const [bx, by] = base[(s + 1) % base.length];
+    const len = Math.hypot(bx - ax, by - ay);
+    const steps = Math.max(3, Math.round(len / 3.2));
+    // inward normal for a clockwise outline
+    const nx = -(by - ay) / len;
+    const ny = (bx - ax) / len;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      const d = bite();
+      pts.push([ax + (bx - ax) * t + nx * d, ay + (by - ay) * t + ny * d]);
+    }
+  }
+  return pts.map(([px, py]) => [Math.min(100, Math.max(0, px)), Math.min(140, Math.max(0, py))]);
+}
 
 export interface ShapeDef {
   nameCs: string;
@@ -264,6 +427,51 @@ export const SHAPES: Record<ShapeId, ShapeDef> = {
     safeTop: 7,
     safeBottom: 7,
   },
+  fut: {
+    nameCs: "Herní",
+    descriptionCs: "Klasická herní karta: vykrojené horní rohy a špička dole",
+    polygon: [
+      ...arc(0, 0, 9, 9, 90, 0, 6),
+      ...arc(100, 0, 9, 9, 180, 90, 6),
+      [100, 121],
+      [50, 140],
+      [0, 121],
+    ],
+    safeTop: 3,
+    safeBottom: 11,
+  },
+  crown: {
+    nameCs: "Korunka",
+    descriptionCs: "Zubatý vršek se zářezem uprostřed jako speciální edice",
+    polygon: CROWN_TOP_AND_SHIELD(0),
+    safeTop: 6,
+    safeBottom: 8,
+  },
+  pillar: {
+    nameCs: "Sloupky",
+    descriptionCs: "Korunka se sloupky po stranách",
+    polygon: [
+      ...CROWN_TOP_AND_SHIELD(5).slice(0, 13),
+      [95, 22],
+      [100, 24],
+      [100, 108],
+      [95, 110],
+      ...CROWN_TOP_AND_SHIELD(5).slice(13),
+      [5, 110],
+      [0, 108],
+      [0, 24],
+      [5, 22],
+    ],
+    safeTop: 6,
+    safeBottom: 8,
+  },
+  torn: {
+    nameCs: "Natržená",
+    descriptionCs: "Roztrhaný papírový okraj",
+    polygon: tornOutline(),
+    safeTop: 7,
+    safeBottom: 11,
+  },
   bevel: {
     nameCs: "Bevel",
     descriptionCs: "Čisté zkosené rohy",
@@ -302,6 +510,11 @@ export interface FrameDef {
   background: (p: Palette) => string;
   /** Frame thickness as a fraction of card width. */
   thickness: number;
+  /** Second, inner line (the double outline of promo cards): gap and line widths as fractions of
+   *  card width; the gap shows the card's dark tone, the line its own colour. */
+  inner?: { gap: number; line: number; background: (p: Palette) => string };
+  /** Glow colour around the card on screen (neon frames) instead of the rarity glow. */
+  glow?: (p: Palette) => string;
 }
 
 export const FRAMES: Record<FrameId, FrameDef> = {
@@ -362,11 +575,127 @@ export const FRAMES: Record<FrameId, FrameDef> = {
     thickness: 0.01,
     background: (p) => p.accent,
   },
+  doublegold: {
+    nameCs: "Dvojitá zlatá",
+    thickness: 0.012,
+    background: () => "linear-gradient(135deg, oklch(0.93 0.1 95), oklch(0.68 0.14 72) 45%, oklch(0.92 0.1 90))",
+    inner: {
+      gap: 0.018,
+      line: 0.008,
+      background: () => "linear-gradient(135deg, oklch(0.9 0.12 90), oklch(0.7 0.14 72))",
+    },
+  },
+  doublesilver: {
+    nameCs: "Dvojitá stříbrná",
+    thickness: 0.014,
+    background: () => "linear-gradient(135deg, oklch(0.98 0 0), oklch(0.62 0.01 250) 45%, oklch(0.94 0.01 300))",
+    inner: {
+      gap: 0.016,
+      line: 0.008,
+      background: () => "linear-gradient(135deg, oklch(0.95 0.02 300), oklch(0.72 0.03 290))",
+    },
+  },
+  neonline: {
+    nameCs: "Neonové linky",
+    thickness: 0.011,
+    background: (p) => p.accent2,
+    inner: { gap: 0.014, line: 0.009, background: (p) => p.accent },
+    glow: (p) => p.accent2,
+  },
+  paper: {
+    nameCs: "Papír",
+    thickness: 0.032,
+    background: () =>
+      "radial-gradient(ellipse at 30% 20%, oklch(0.99 0.01 85), oklch(0.9 0.02 80) 70%), linear-gradient(oklch(0.95 0.015 85), oklch(0.85 0.02 75))",
+  },
 };
 
 // ─── Backgrounds (`pattern`) ──────────────────────────────────────────────────
 
 const mix = (c: string, pct: number, other = "transparent") => `color-mix(in oklch, ${c} ${pct}%, ${other})`;
+
+// Illustrated backgrounds are SVG drawn in the palette's colours (300 × 420 = card ratio),
+// stretched over the face on top of the base gradient. SVG filters (turbulence) give organic
+// textures — marble, fire, smoke, grunge — that plain CSS gradients can't.
+const ART_W = 300;
+const ART_H = 420;
+
+function svgUri(svg: string): string {
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function art(p: Palette, body: string, base = `linear-gradient(165deg, ${p.bg1}, ${p.bg2})`): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${ART_W}" height="${ART_H}" viewBox="0 0 ${ART_W} ${ART_H}" preserveAspectRatio="none">${body}</svg>`;
+  return `${svgUri(svg)} center / 100% 100% no-repeat, ${base}`;
+}
+
+function rng(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return s / 2147483647;
+  };
+}
+
+// Turbulence noise turned into a coloured layer: alpha = gain·R + bias picks blobs, veins or specks.
+function noise(
+  id: string,
+  opts: { freq: string; seed: number; gain: number; bias: number; color: string; opacity?: number; type?: "turbulence" | "fractalNoise"; octaves?: number }
+): string {
+  const { freq, seed, gain, bias, color, opacity = 1, type = "fractalNoise", octaves = 3 } = opts;
+  return `<filter id="${id}" x="0" y="0" width="100%" height="100%"><feTurbulence type="${type}" baseFrequency="${freq}" numOctaves="${octaves}" seed="${seed}" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${gain} 0 0 0 ${bias}" result="a"/><feFlood flood-color="${color}" flood-opacity="${opacity}"/><feComposite in2="a" operator="in"/></filter><rect width="${ART_W}" height="${ART_H}" filter="url(#${id})"/>`;
+}
+
+const GLOW_FILTER = (id: string, blur: number) =>
+  `<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blur}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+
+function streakLines(): string {
+  const r = rng(3);
+  let out = "";
+  for (let y = -300; y < ART_H; y += 11) {
+    const w = (0.5 + r() * 2.2).toFixed(2);
+    const o = (0.08 + r() * 0.3).toFixed(2);
+    out += `<line x1="${ART_W + 40}" y1="${y}" x2="-40" y2="${y + 300}" stroke="white" stroke-width="${w}" stroke-opacity="${o}"/>`;
+  }
+  return out;
+}
+
+function neonZigzags(colors: string[]): string {
+  const cx = 150;
+  const cy = 165;
+  let out = "";
+  for (let k = 0; k < 14; k++) {
+    const a = (k / 14) * Math.PI * 2 + 0.2;
+    const pts: string[] = [];
+    for (let i = 0; i <= 4; i++) {
+      const rad = 40 + i * 70;
+      const zig = (i % 2 ? 0.16 : -0.16) + a;
+      pts.push(`${(cx + Math.cos(zig) * rad).toFixed(1)},${(cy + Math.sin(zig) * rad).toFixed(1)}`);
+    }
+    out += `<polyline points="${pts.join(" ")}" fill="none" stroke="${colors[k % colors.length]}" stroke-width="4" stroke-linejoin="miter" stroke-opacity="0.9"/>`;
+  }
+  return out;
+}
+
+function stars(count: number, seed: number): string {
+  const r = rng(seed);
+  let out = "";
+  for (let i = 0; i < count; i++) {
+    out += `<circle cx="${(r() * ART_W).toFixed(1)}" cy="${(r() * ART_H * 0.75).toFixed(1)}" r="${(0.5 + r() * 1.3).toFixed(2)}" fill="white" fill-opacity="${(0.3 + r() * 0.6).toFixed(2)}"/>`;
+  }
+  return out;
+}
+
+function burstRays(): string {
+  let out = "";
+  for (let k = 0; k < 20; k++) {
+    const a1 = Math.PI * 0.45 + (k / 20) * Math.PI * 1.1;
+    const a2 = a1 + 0.07;
+    const R = 520;
+    out += `<polygon points="265,45 ${(265 + Math.cos(a1) * R).toFixed(0)},${(45 + Math.sin(a1) * R).toFixed(0)} ${(265 + Math.cos(a2) * R).toFixed(0)},${(45 + Math.sin(a2) * R).toFixed(0)}" fill="url(#ray)" opacity="${k % 2 ? 0.25 : 0.5}"/>`;
+  }
+  return out;
+}
 
 export const PATTERNS: Record<PatternId, { nameCs: string; descriptionCs: string; css: (p: Palette) => string }> = {
   clean: {
@@ -415,6 +744,151 @@ export const PATTERNS: Record<PatternId, { nameCs: string; descriptionCs: string
     css: (p) =>
       `radial-gradient(ellipse 120% 45% at 50% 108%, ${mix(p.accent2, 85)}, ${mix(p.accent, 30)} 40%, transparent 70%), radial-gradient(ellipse 50% 35% at 20% 30%, ${mix("white", 8)}, transparent 70%), radial-gradient(ellipse 60% 40% at 85% 55%, ${mix("white", 6)}, transparent 70%), linear-gradient(180deg, ${p.bg1}, ${p.bg2})`,
   },
+  marble: {
+    nameCs: "Mramor",
+    descriptionCs: "Světlý mramor se zlatými žilkami",
+    css: (p) =>
+      art(
+        p,
+        noise("v", { freq: "0.011 0.02", seed: 11, gain: -6, bias: 1.05, color: p.accent, opacity: 0.55, type: "turbulence", octaves: 4 }) +
+          noise("w", { freq: "0.02 0.04", seed: 5, gain: -9, bias: 1.1, color: p.muted, opacity: 0.25, type: "turbulence", octaves: 3 })
+      ),
+  },
+  ribbons: {
+    nameCs: "Zlaté pásy",
+    descriptionCs: "Šikmé kovové pásy a geometrie",
+    css: (p) =>
+      art(
+        p,
+        `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${p.accent2}"/><stop offset="0.5" stop-color="white" stop-opacity="0.95"/><stop offset="1" stop-color="${p.accent}"/></linearGradient></defs>` +
+          `<polygon points="300,30 300,92 115,420 60,420" fill="url(#g)" opacity="0.45"/>` +
+          `<polygon points="246,0 262,0 34,420 18,420" fill="url(#g)" opacity="0.85"/>` +
+          `<polygon points="300,150 300,172 170,420 148,420" fill="${p.accent}" opacity="0.3"/>` +
+          `<polygon points="300,0 205,0 300,118" fill="url(#g)" opacity="0.35"/>` +
+          `<polyline points="186,0 236,62 300,62" fill="none" stroke="url(#g)" stroke-width="9" opacity="0.6"/>` +
+          `<polyline points="214,0 250,44 300,44" fill="none" stroke="${p.accent}" stroke-width="3" opacity="0.6"/>`
+      ),
+  },
+  streaks: {
+    nameCs: "Světelné čáry",
+    descriptionCs: "Jemné paprsky přes kartičku",
+    css: (p) =>
+      art(
+        p,
+        `<defs><radialGradient id="rg" cx="0.85" cy="0.12" r="0.9"><stop offset="0" stop-color="white"/><stop offset="0.75" stop-color="white" stop-opacity="0"/></radialGradient><mask id="k"><rect width="${ART_W}" height="${ART_H}" fill="url(#rg)"/></mask></defs>` +
+          `<g mask="url(#k)">${streakLines()}</g>`
+      ),
+  },
+  crystal: {
+    nameCs: "Krystal",
+    descriptionCs: "Velký lesklý krystal v rohu",
+    css: (p) =>
+      art(
+        p,
+        `<defs><linearGradient id="c1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="white" stop-opacity="0.95"/><stop offset="0.45" stop-color="${p.accent2}" stop-opacity="0.8"/><stop offset="1" stop-color="${p.accent}" stop-opacity="0.25"/></linearGradient><linearGradient id="c2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.accent2}" stop-opacity="0.9"/><stop offset="1" stop-color="white" stop-opacity="0.15"/></linearGradient></defs>` +
+          stars(28, 9) +
+          `<polygon points="205,0 300,0 300,195 176,112" fill="url(#c1)" opacity="0.8"/>` +
+          `<polygon points="176,112 300,195 300,268 232,236" fill="url(#c2)" opacity="0.55"/>` +
+          `<polygon points="205,0 176,112 122,28" fill="url(#c2)" opacity="0.45"/>` +
+          `<polyline points="205,0 176,112 300,195" fill="none" stroke="white" stroke-opacity="0.75" stroke-width="1.5"/>`
+      ),
+  },
+  neonburst: {
+    nameCs: "Neonový výbuch",
+    descriptionCs: "Zářící neonové blesky z hráče",
+    css: (p) =>
+      art(
+        p,
+        `<defs>${GLOW_FILTER("gl", 3)}</defs><g filter="url(#gl)">${neonZigzags([p.accent2, p.accent, "oklch(0.9 0.18 100)"])}</g>`
+      ),
+  },
+  swirl: {
+    nameCs: "Holo vlny",
+    descriptionCs: "Tekuté holografické vlny",
+    css: (p) =>
+      art(
+        p,
+        `<defs><filter id="sb" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="5"/></filter><linearGradient id="sg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${p.accent2}"/><stop offset="0.5" stop-color="oklch(0.85 0.12 200)"/><stop offset="1" stop-color="${p.accent2}"/></linearGradient></defs>` +
+          `<g filter="url(#sb)" fill="none" stroke-linecap="round">` +
+          `<path d="M-30 125 C 80 40, 170 230, 330 90" stroke="url(#sg)" stroke-width="40" opacity="0.55"/>` +
+          `<path d="M-30 245 C 120 180, 200 335, 330 230" stroke="${p.accent2}" stroke-width="30" opacity="0.4"/></g>` +
+          `<g fill="none" stroke-linecap="round"><path d="M-30 185 C 100 105, 180 265, 330 160" stroke="url(#sg)" stroke-width="14" opacity="0.6"/>` +
+          `<path d="M-30 62 C 60 0, 200 160, 330 32" stroke="white" stroke-width="4" opacity="0.55"/>` +
+          `<path d="M-30 200 C 100 120, 180 280, 330 175" stroke="white" stroke-width="1.5" opacity="0.7"/></g>`
+      ),
+  },
+  flames: {
+    nameCs: "Oheň a kouř",
+    descriptionCs: "Plameny a dým zdola nahoru",
+    css: (p) =>
+      art(
+        p,
+        // Tongues: noise stretched vertically (high x / low y frequency), kept to the bottom by a
+        // fading fill and to the edges by a vignette, so the centre behind the player stays calm.
+        `<defs><linearGradient id="fg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${p.accent2}"/><stop offset="0.35" stop-color="${p.accent2}" stop-opacity="0.85"/><stop offset="0.7" stop-color="${p.accent}" stop-opacity="0.25"/><stop offset="1" stop-color="${p.accent}" stop-opacity="0"/></linearGradient>` +
+          `<radialGradient id="fv" cx="0.5" cy="0.4" r="0.75"><stop offset="0.5" stop-color="${p.accent2}" stop-opacity="0"/><stop offset="1" stop-color="${p.accent2}" stop-opacity="0.9"/></radialGradient>` +
+          `<filter id="ft" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.032 0.0065" numOctaves="3" seed="4" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3.2 0 0 0 -0.95" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter>` +
+          `<filter id="fe" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.028 0.008" numOctaves="3" seed="12" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 0 0 0 -0.8" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter></defs>` +
+          `<rect width="${ART_W}" height="${ART_H}" fill="url(#fg)" filter="url(#ft)"/>` +
+          `<rect width="${ART_W}" height="${ART_H}" fill="url(#fv)" filter="url(#fe)"/>`
+      ),
+  },
+  grunge: {
+    nameCs: "Grunge",
+    descriptionCs: "Stříkance barvy a oprýskaný povrch",
+    css: (p) =>
+      art(
+        p,
+        noise("gs", { freq: "0.05", seed: 3, gain: 9, bias: -5.6, color: "black", opacity: 0.55, octaves: 2 }) +
+          noise("gw", { freq: "0.035", seed: 21, gain: 8, bias: -5.4, color: "white", opacity: 0.35, octaves: 3 }) +
+          noise("gr", { freq: "0.018", seed: 9, gain: 7, bias: -4.4, color: p.accent2, opacity: 0.75, octaves: 3 })
+      ),
+  },
+  cosmos: {
+    nameCs: "Vesmír",
+    descriptionCs: "Mlhovina a hvězdy",
+    css: (p) =>
+      art(
+        p,
+        `<defs><filter id="nb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter></defs>` +
+          `<g filter="url(#nb)"><ellipse cx="80" cy="90" rx="120" ry="70" fill="${p.accent2}" opacity="0.45"/><ellipse cx="240" cy="200" rx="110" ry="90" fill="${p.accent}" opacity="0.25"/><ellipse cx="150" cy="330" rx="160" ry="60" fill="${p.accent2}" opacity="0.3"/></g>` +
+          stars(55, 4)
+      ),
+  },
+  explosion: {
+    nameCs: "Exploze",
+    descriptionCs: "Barevný výbuch z rohu",
+    css: (p) =>
+      art(
+        p,
+        `<defs><linearGradient id="ray" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${p.accent}"/><stop offset="1" stop-color="${p.accent2}" stop-opacity="0"/></linearGradient><radialGradient id="core" cx="0.88" cy="0.1" r="0.6"><stop offset="0" stop-color="white" stop-opacity="0.9"/><stop offset="0.25" stop-color="${p.accent2}" stop-opacity="0.85"/><stop offset="1" stop-color="${p.accent2}" stop-opacity="0"/></radialGradient></defs>` +
+          burstRays() +
+          `<rect width="${ART_W}" height="${ART_H}" fill="url(#core)"/>` +
+          noise("ex", { freq: "0.03", seed: 6, gain: 6, bias: -3.6, color: p.accent2, opacity: 0.4, octaves: 2 })
+      ),
+  },
+};
+
+// ─── Aura, photo filter, name style ───────────────────────────────────────────
+
+export const AURAS: Record<AuraId, { nameCs: string }> = {
+  none: { nameCs: "Žádná" },
+  glow: { nameCs: "Záře" },
+  smoke: { nameCs: "Kouř" },
+  fire: { nameCs: "Plameny" },
+};
+
+export const PHOTO_FILTERS: Record<PhotoFilterId, { nameCs: string; css?: string }> = {
+  none: { nameCs: "Barevná" },
+  mono: { nameCs: "Černobílá", css: "grayscale(1) contrast(1.08)" },
+  warm: { nameCs: "Teplá", css: "sepia(0.3) saturate(1.25) contrast(1.05)" },
+  duo: { nameCs: "Dvoubarevná", css: "grayscale(1) contrast(1.1)" },
+};
+
+export const NAME_STYLES: Record<NameStyleId, { nameCs: string }> = {
+  block: { nameCs: "Klasické" },
+  signature: { nameCs: "Podpis" },
+  outline: { nameCs: "Obrys" },
 };
 
 // ─── Finishes (light overlays; move with the pointer on interactive cards) ────
@@ -482,6 +956,7 @@ export const GRAIN = `url("data:image/svg+xml,${encodeURIComponent(
 // ─── Layouts ──────────────────────────────────────────────────────────────────
 
 export const LAYOUTS: Record<LayoutId, { nameCs: string; descriptionCs: string; window: boolean }> = {
+  fc: { nameCs: "Herní karta", descriptionCs: "Hodnocení vlevo nahoře, jméno a 6 statistik v jedné řadě", window: false },
   pro: { nameCs: "Pro", descriptionCs: "Hodnocení a pozice vlevo nahoře, statistiky ve dvou řadách", window: false },
   classic: { nameCs: "Klasika", descriptionCs: "Fotka nahoře, jméno a statistiky dole", window: false },
   fullbleed: { nameCs: "Přes celou", descriptionCs: "Fotka přes celou kartičku, text přes ni", window: false },
@@ -492,10 +967,11 @@ export const LAYOUTS: Record<LayoutId, { nameCs: string; descriptionCs: string; 
 
 // ─── Sets (presets) ───────────────────────────────────────────────────────────
 
-export type PresetTag = "zaklad" | "specialy" | "chrome" | "legendy";
+export type PresetTag = "zaklad" | "edice" | "specialy" | "chrome" | "legendy";
 
 export const PRESET_TAGS: { id: PresetTag; nameCs: string }[] = [
   { id: "zaklad", nameCs: "Základ" },
+  { id: "edice", nameCs: "Herní edice" },
   { id: "specialy", nameCs: "Speciály" },
   { id: "chrome", nameCs: "Chrome" },
   { id: "legendy", nameCs: "Legendy" },
@@ -520,12 +996,35 @@ const d = (
   popOut = false
 ): CardDesign => ({ shape, frame, layout, palette, pattern, finish, ...(popOut && { popOut }) });
 
+// Design with the extra touches of game promo cards: aura, photo treatment, name style.
+const dx = (
+  base: CardDesign,
+  extra: { aura?: AuraId; photoFilter?: PhotoFilterId; nameStyle?: NameStyleId }
+): CardDesign => ({ ...base, ...extra });
+
 export const PRESETS: Preset[] = [
   // Základ — the everyday ladder, free
-  { id: "base-bronze", nameCs: "Bronz", descriptionCs: "Začátek sbírky", tags: ["zaklad"], requiredTier: "free", design: d("elite", "bronze", "pro", "bronze", "facets", "gloss") },
-  { id: "base-silver", nameCs: "Stříbro", descriptionCs: "Stříbrná řada", tags: ["zaklad"], requiredTier: "free", design: d("elite", "silver", "pro", "platinum", "facets", "gloss") },
-  { id: "base-gold", nameCs: "Zlato", descriptionCs: "Klasická zlatá karta", tags: ["zaklad"], requiredTier: "free", design: d("elite", "gold", "pro", "gold", "facets", "gloss") },
-  { id: "totw", nameCs: "Hvězda kola", descriptionCs: "Černozlatá karta za skvělý výkon", tags: ["zaklad", "specialy"], requiredTier: "free", design: d("elite", "gold", "pro", "blackgold", "facets", "shimmer") },
+  { id: "base-bronze", nameCs: "Bronz", descriptionCs: "Začátek sbírky", tags: ["zaklad"], requiredTier: "free", design: d("fut", "bronze", "fc", "bronze", "streaks", "gloss") },
+  { id: "base-silver", nameCs: "Stříbro", descriptionCs: "Stříbrná řada", tags: ["zaklad"], requiredTier: "free", design: d("fut", "silver", "fc", "platinum", "streaks", "gloss") },
+  { id: "base-gold", nameCs: "Zlato", descriptionCs: "Klasická zlatá karta", tags: ["zaklad"], requiredTier: "free", design: d("fut", "gold", "fc", "gold", "streaks", "gloss") },
+
+  // Herní edice — inspired by current game promo cards
+  { id: "ed-totw", nameCs: "Hvězda kola", descriptionCs: "Černozlatá s dvojitou linkou", tags: ["edice", "zaklad"], requiredTier: "free", design: d("crown", "doublegold", "fc", "blackgold", "streaks", "shimmer") },
+  { id: "ed-legacy", nameCs: "Dědictví", descriptionCs: "Měděná s natrženým okrajem", tags: ["edice", "zaklad"], requiredTier: "free", design: d("torn", "paper", "fc", "copper", "smoke", "shimmer") },
+  { id: "ed-grunge", nameCs: "Grunge", descriptionCs: "Oprýskaná šedá se stříkanci", tags: ["edice", "zaklad"], requiredTier: "free", design: d("torn", "silver", "fc", "grunge", "grunge", "none") },
+  { id: "ed-icon", nameCs: "Ikona", descriptionCs: "Bílozlatá s podpisem a zlatými pásy", tags: ["edice", "legendy"], requiredTier: "premium", design: dx(d("crown", "doublegold", "fc", "icon", "ribbons", "goldglint"), { aura: "glow", photoFilter: "mono", nameStyle: "signature" }) },
+  { id: "ed-icon-marble", nameCs: "Mramorová ikona", descriptionCs: "Mramor se zlatými žilkami a podpisem", tags: ["edice", "legendy"], requiredTier: "premium", design: dx(d("fut", "doublegold", "fc", "icon", "marble", "goldglint"), { photoFilter: "mono", nameStyle: "signature" }) },
+  { id: "ed-future", nameCs: "Budoucí hvězdy", descriptionCs: "Fialový vesmír s krystalem", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "doublesilver", "fc", "futurestars", "crystal", "refractor"), { aura: "glow" }) },
+  { id: "ed-scream", nameCs: "Ultimate Scream", descriptionCs: "Plameny a fialový kouř kolem", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "rosegold", "fc", "scream", "flames", "gloss"), { aura: "fire" }) },
+  { id: "ed-ghost", nameCs: "Přízrak", descriptionCs: "Zelený přízračný oheň", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "neonline", "fc", "ghost", "flames", "refractor"), { aura: "smoke" }) },
+  { id: "ed-flashback", nameCs: "Flashback", descriptionCs: "Neonové linky a neonový výbuch", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "neonline", "fc", "flashback", "neonburst", "none"), { aura: "glow" }) },
+  { id: "ed-hero", nameCs: "Hrdina", descriptionCs: "Holografické vlny a zlaté písmo", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "doublesilver", "fc", "hero", "swirl", "refractor"), { aura: "glow" }) },
+  { id: "ed-trailblazer", nameCs: "Průkopník", descriptionCs: "Tyrkys s oranžovou explozí", tags: ["edice"], requiredTier: "premium", design: d("torn", "gold", "fc", "trailblazer", "explosion", "refractor") },
+  { id: "ed-champion", nameCs: "Fialový šampion", descriptionCs: "Stříbrné sloupky a ametyst", tags: ["edice"], requiredTier: "premium", design: d("pillar", "doublesilver", "fc", "amethyst", "crystal", "shimmer") },
+  { id: "ed-highlights", nameCs: "Zajímaví hráči", descriptionCs: "Duhový okraj a světelné čáry", tags: ["edice"], requiredTier: "premium", design: dx(d("fut", "chrome", "fc", "aqua", "streaks", "refractor"), { aura: "glow" }) },
+  { id: "ed-cosmic", nameCs: "Vesmírná", descriptionCs: "Mlhovina, hvězdy a neon", tags: ["edice"], requiredTier: "premium", design: d("crown", "neonline", "fc", "futurestars", "cosmos", "shimmer") },
+  { id: "ed-blaze", nameCs: "Plamenný", descriptionCs: "Ohnivá karta v kouři", tags: ["edice"], requiredTier: "premium", design: dx(d("fut", "rosegold", "fc", "scream", "flames", "shimmer"), { aura: "smoke", photoFilter: "warm" }) },
+  { id: "totw", nameCs: "Černé zlato", descriptionCs: "Černozlatá karta za skvělý výkon", tags: ["zaklad", "specialy"], requiredTier: "free", design: d("elite", "gold", "pro", "blackgold", "facets", "shimmer") },
   { id: "chrome-base", nameCs: "Chrome", descriptionCs: "Lesklá chromová karta", tags: ["zaklad", "chrome"], requiredTier: "free", design: d("classic", "silver", "classic", "platinum", "clean", "refractor") },
   { id: "club", nameCs: "Klubovka", descriptionCs: "V barvách týmu", tags: ["zaklad"], requiredTier: "free", design: d("bevel", "team", "sidebar", "royal", "mesh", "gloss") },
   { id: "frost-minimal", nameCs: "Mráz", descriptionCs: "Čistá světlá karta", tags: ["zaklad"], requiredTier: "free", design: d("bevel", "ice", "minimal", "frost", "mesh", "gloss") },
@@ -608,7 +1107,10 @@ function normalizeDesign(design: CardDesign): CardDesign {
       ? design.palette
       : OLD_PALETTES[design.palette] ?? "blackgold";
   const layout = LAYOUTS[design.layout] ? design.layout : "classic";
-  return { ...design, shape, frame, pattern, finish, palette, layout };
+  const aura = design.aura && AURAS[design.aura] ? design.aura : undefined;
+  const photoFilter = design.photoFilter && PHOTO_FILTERS[design.photoFilter] ? design.photoFilter : undefined;
+  const nameStyle = design.nameStyle && NAME_STYLES[design.nameStyle] ? design.nameStyle : undefined;
+  return { ...design, shape, frame, pattern, finish, palette, layout, aura, photoFilter, nameStyle };
 }
 
 // Cards created before the design system carry a template category or a seeded template id.
@@ -632,4 +1134,35 @@ export function resolveDesign(card: Pick<Card, "design" | "templateId" | "templa
     LEGACY_PRESETS[card.templateStyle ?? ""] ??
     LEGACY_PRESETS[card.templateId ?? ""];
   return getPreset(presetId)?.design ?? DEFAULT_DESIGN;
+}
+
+// ─── Flag & club crest placement ──────────────────────────────────────────────
+
+export const BADGE_PLACEMENTS: Record<BadgePlacementId, { nameCs: string; layouts?: LayoutId[] }> = {
+  bottom: { nameCs: "Dole", layouts: ["fc"] },
+  rating: { nameCs: "U hodnocení", layouts: ["fc", "pro"] },
+  topRight: { nameCs: "Vpravo nahoře" },
+  photo: { nameCs: "V rozích fotky" },
+};
+
+export function badgePlacementsFor(layout: LayoutId): BadgePlacementId[] {
+  return (Object.keys(BADGE_PLACEMENTS) as BadgePlacementId[]).filter((id) => {
+    const only = BADGE_PLACEMENTS[id].layouts;
+    return !only || only.includes(layout);
+  });
+}
+
+const DEFAULT_PLACEMENT: Partial<Record<LayoutId, BadgePlacementId>> = { fc: "bottom", pro: "rating" };
+
+// The card's own choice, falling back to a spot the current layout supports
+// (a preset change can switch to a layout without e.g. a bottom row).
+export function resolveBadges(badges: CardBadges | undefined, layout: LayoutId): CardBadges {
+  const fallback = DEFAULT_PLACEMENT[layout] ?? "topRight";
+  const placement = badges && badgePlacementsFor(layout).includes(badges.placement) ? badges.placement : fallback;
+  return {
+    flag: badges?.flag ?? true,
+    crest: badges?.crest ?? true,
+    placement,
+    flagShape: badges?.flagShape ?? "rect",
+  };
 }

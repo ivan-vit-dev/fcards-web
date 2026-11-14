@@ -7,14 +7,21 @@ import {
   FRAMES,
   GRAIN,
   PATTERNS,
+  PHOTO_FILTERS,
   SHAPES,
+  resolveBadges,
   resolveDesign,
   resolvePalette,
   shapeClipPath,
+  type AuraId,
+  type NameStyleId,
   type Palette,
+  type PhotoFilterId,
 } from "@/lib/cardDesign";
 import { RarityBadge } from "./RarityBadge";
-import type { Card, CardDesign, CardStats, Player, PlayerPosition } from "@/types";
+import { Flag } from "./Flag";
+import { TeamCrest } from "./TeamCrest";
+import type { Card, CardBadges, CardDesign, CardStats, CardTeam, Player, PlayerPosition } from "@/types";
 
 const cardTypeLabels: Record<string, string> = {
   match: "Zápasová",
@@ -90,6 +97,11 @@ interface LayoutProps {
   backgroundUrl?: string;
   popOut: boolean;
   cutout: boolean;
+  photoFilter?: PhotoFilterId;
+  nameStyle: NameStyleId;
+  nationality: string;
+  team?: CardTeam;
+  badges: CardBadges;
 }
 
 const MAX_TILT = 14; // degrees
@@ -116,9 +128,17 @@ export function CardPreview({
   const clipPath = shapeClipPath(design.shape);
   const radius = shape.radius !== undefined ? shape.radius * dims.w : 0;
   const thickness = Math.max(1.5, frame.thickness * dims.w);
+  // Double-outline frames: outer line, a dark gap, an inner line, then the face.
+  const innerGap = frame.inner ? Math.max(1, frame.inner.gap * dims.w) : 0;
+  const innerLine = frame.inner ? Math.max(1, frame.inner.line * dims.w) : 0;
+  const faceInset = thickness + innerGap + innerLine;
   const rarityColor = getRarityColor(card.rarity);
-  const glow = card.rarity === "legendary" || card.rarity === "mythic" ? 50 : 24;
+  const glowColor = frame.glow ? frame.glow(p) : rarityColor;
+  const glow = frame.glow ? 75 : card.rarity === "legendary" || card.rarity === "mythic" ? 50 : 24;
+  const glowBlur = frame.glow ? 0.07 : 0.05;
+  const aura = design.aura && design.aura !== "none" && !flat ? design.aura : null;
 
+  const badges = resolveBadges(card.badges, design.layout);
   const name = player?.displayName ?? card.playerName ?? "Hráč";
   const photoUrl = card.photoUrl ?? player?.photoURL;
   const stats = STAT_LABELS.flatMap(([key, label]) => {
@@ -144,12 +164,18 @@ export function CardPreview({
         alt={name}
         accent={p.accent}
         cutout={!!card.photoUrl && !!card.photoCutout}
+        photoFilter={design.photoFilter}
       />
     ),
     cutout: !!card.photoUrl && !!card.photoCutout,
     photoUrl,
     backgroundUrl: card.backgroundUrl,
     popOut: !!design.popOut,
+    photoFilter: design.photoFilter,
+    nameStyle: design.nameStyle ?? "block",
+    nationality: card.nationality ?? player?.nationality ?? "CZ",
+    team: card.team,
+    badges,
   };
 
   const Layout = LAYOUT_COMPONENTS[design.layout] ?? ClassicLayout;
@@ -191,19 +217,38 @@ export function CardPreview({
         touchAction: interactive ? "pan-y" : undefined,
         filter: flat
           ? undefined
-          : `drop-shadow(0 ${dims.w * 0.015}px ${dims.w * 0.05}px color-mix(in oklch, ${rarityColor} ${glow}%, transparent))`,
+          : `drop-shadow(0 ${dims.w * 0.015}px ${dims.w * glowBlur}px color-mix(in oklch, ${glowColor} ${glow}%, transparent))`,
       }}
     >
+      {aura && <Aura kind={aura} p={p} />}
+
       {/* Frame */}
       <div className="absolute inset-0" style={{ background: frame.background(p), clipPath, borderRadius: radius }} />
+      {frame.inner && (
+        <>
+          <div
+            className="absolute"
+            style={{ inset: thickness, background: p.bg2, clipPath, borderRadius: Math.max(0, radius - thickness) }}
+          />
+          <div
+            className="absolute"
+            style={{
+              inset: thickness + innerGap,
+              background: frame.inner.background(p),
+              clipPath,
+              borderRadius: Math.max(0, radius - thickness - innerGap),
+            }}
+          />
+        </>
+      )}
 
       {/* Face */}
       <div
         className="absolute overflow-hidden"
         style={{
-          inset: thickness,
+          inset: faceInset,
           clipPath,
-          borderRadius: Math.max(0, radius - thickness),
+          borderRadius: Math.max(0, radius - faceInset),
           background: PATTERNS[design.pattern].css(p),
           color: p.text,
         }}
@@ -213,6 +258,17 @@ export function CardPreview({
         )}
 
         <Layout {...layoutProps} />
+
+        {/* Placements the layouts don't draw themselves */}
+        {(badges.placement === "topRight" || badges.placement === "photo") && (
+          <BadgeOverlay
+            badges={badges}
+            nationality={layoutProps.nationality}
+            team={card.team}
+            p={p}
+            safeTop={shape.safeTop}
+          />
+        )}
 
         <div
           className="absolute inset-0 pointer-events-none"
@@ -280,6 +336,7 @@ function PhotoLayer({
   alt,
   accent,
   cutout,
+  photoFilter = "none",
   placeholder = true,
   className,
   style,
@@ -289,10 +346,12 @@ function PhotoLayer({
   alt: string;
   accent: string;
   cutout?: boolean;
+  photoFilter?: PhotoFilterId;
   placeholder?: boolean;
   className?: string;
   style?: CSSProperties;
 }) {
+  const filter = [PHOTO_FILTERS[photoFilter]?.css, cutout ? CUTOUT_SHADOW : undefined].filter(Boolean).join(" ");
   return (
     <div className={cn("absolute inset-0 overflow-hidden", className)} style={style}>
       {background && (
@@ -300,13 +359,20 @@ function PhotoLayer({
         <img src={background} alt="" className="absolute inset-0 w-full h-full object-cover" />
       )}
       {photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={photo}
-          alt={alt}
-          className="relative w-full h-full object-cover object-top"
-          style={cutout ? { filter: CUTOUT_SHADOW } : undefined}
-        />
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo}
+            alt={alt}
+            className="relative w-full h-full object-cover object-top"
+            style={filter ? { filter } : undefined}
+          />
+          {/* Duotone: tint the greyscale photo with the card colour (opaque photos only —
+              on a cut-out the tint would also colour the scene behind the player). */}
+          {photoFilter === "duo" && !cutout && (
+            <div className="absolute inset-0" style={{ background: accent, mixBlendMode: "color", opacity: 0.55 }} />
+          )}
+        </>
       ) : (
         placeholder &&
         !background && (
@@ -320,6 +386,171 @@ function PhotoLayer({
         )
       )}
     </div>
+  );
+}
+
+// Light or smoke spilling out around the card (screen only — print passes `flat`). A blurred,
+// slowly turning conic gradient behind the card reads as glowing haze or drifting smoke.
+function Aura({ kind, p }: { kind: AuraId; p: Palette }) {
+  const colors =
+    kind === "fire"
+      ? `oklch(0.75 0.2 50), ${p.accent2}, oklch(0.65 0.24 30), transparent, oklch(0.8 0.18 70), ${p.accent2}, oklch(0.75 0.2 50)`
+      : kind === "smoke"
+        ? `${p.accent2}, transparent, ${p.accent}, transparent 55%, ${p.accent2}, transparent, ${p.accent2}`
+        : `${p.accent2}, ${p.accent}, ${p.accent2}, ${p.accent}, ${p.accent2}`;
+  return (
+    <div
+      className="absolute pointer-events-none overflow-hidden"
+      style={{
+        inset: "-9% -11%",
+        zIndex: -1,
+        borderRadius: "35%",
+        filter: `blur(${kind === "glow" ? 0.9 : 1.2}em)`,
+        opacity: kind === "glow" ? 0.65 : 0.85,
+      }}
+    >
+      <div
+        className={kind === "glow" ? "card-aura-pulse" : "card-aura-spin"}
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: "140%",
+          aspectRatio: "1",
+          translate: "-50% -50%",
+          background: `conic-gradient(${colors})`,
+        }}
+      />
+    </div>
+  );
+}
+
+// The player's name in the design's style: bold block caps, a handwritten signature
+// (icon cards) or hollow outline letters.
+function NameText({
+  name,
+  styleId,
+  color,
+  size = 1.3,
+  className,
+  style,
+}: {
+  name: string;
+  styleId: NameStyleId;
+  color: string;
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  if (styleId === "signature") {
+    return (
+      <p
+        className={cn("leading-none truncate text-center", className)}
+        style={{
+          fontFamily: "var(--font-script), cursive",
+          fontSize: `${size * 1.55}em`,
+          color,
+          transform: "rotate(-4deg)",
+          paddingBottom: "0.1em",
+          ...style,
+        }}
+      >
+        {name}
+      </p>
+    );
+  }
+  return (
+    <p
+      className={cn("font-display font-bold uppercase leading-tight truncate tracking-wide", className)}
+      style={{
+        fontSize: `${size}em`,
+        color: styleId === "outline" ? "transparent" : color,
+        WebkitTextStroke: styleId === "outline" ? `0.045em ${color}` : undefined,
+        ...style,
+      }}
+    >
+      {name}
+    </p>
+  );
+}
+
+// Flag and club crest in a layout-independent spot: stacked under the top-right corner, or in
+// the two bottom corners of the photo area.
+function BadgeOverlay({
+  badges,
+  nationality,
+  team,
+  p,
+  safeTop,
+}: {
+  badges: CardBadges;
+  nationality: string;
+  team?: CardTeam;
+  p: Palette;
+  safeTop: number;
+}) {
+  const flag = badges.flag && (
+    <Flag code={nationality} shape={badges.flagShape} style={{ width: "1.7em", borderRadius: "0.12em", filter: "drop-shadow(0 1px 2px oklch(0 0 0 / 0.5))" }} />
+  );
+  const crest = badges.crest && team && (
+    <TeamCrest
+      team={team}
+      fallbackColor={p.accent2}
+      style={{ width: "1.7em", height: "1.7em", filter: "drop-shadow(0 1px 2px oklch(0 0 0 / 0.5))" }}
+    />
+  );
+  if (!flag && !crest) return null;
+  if (badges.placement === "topRight") {
+    return (
+      <div className="absolute z-20 flex flex-col items-center gap-[0.35em]" style={{ top: `${safeTop + 12}%`, right: "6.5%" }}>
+        {flag}
+        {crest}
+      </div>
+    );
+  }
+  return (
+    <>
+      {flag && (
+        <div className="absolute z-20" style={{ top: "57%", left: "8%" }}>
+          {flag}
+        </div>
+      )}
+      {crest && (
+        <div className="absolute z-20" style={{ top: "56%", right: "8%" }}>
+          {crest}
+        </div>
+      )}
+    </>
+  );
+}
+
+// Tiny game-card accessories: a boot, the shirt number in a chevron, a skill diamond.
+function BootIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 24 12" className="mt-[0.35em]" style={{ width: "1.5em" }} aria-hidden>
+      <path d="M1 9.5c0-2 1.2-3.3 3-3.6L9 5l2.2-3.4c.4-.6 1.2-.7 1.7-.2l1.4 1.3c.9.8 2.1 1.3 3.3 1.4l3.3.3c1.2.1 2.1 1.1 2.1 2.3V8c0 1.1-.9 2-2 2H3c-1.1 0-2-.4-2-.5z" fill={color} />
+      <path d="M3 11.5h2M8 11.5h2M13 11.5h2M18 11.5h2" stroke={color} strokeWidth="1" />
+    </svg>
+  );
+}
+
+function JerseyChevron({ value, color, ink }: { value: number; color: string; ink: string }) {
+  return (
+    <svg viewBox="0 0 20 18" className="mt-[0.3em]" style={{ width: "1.5em" }} aria-hidden>
+      <path d="M1 1h18L10 17z" fill={color} />
+      <text x="10" y="9" textAnchor="middle" fontSize="7.5" fontWeight="700" fill={ink} fontFamily="var(--font-display), sans-serif">
+        {value}
+      </text>
+    </svg>
+  );
+}
+
+function SkillDiamond({ p }: { p: Palette }) {
+  return (
+    <svg viewBox="0 0 20 20" style={{ width: "1.5em" }} aria-hidden>
+      <path d="M10 1l9 9-9 9-9-9z" fill={p.bg2} stroke={p.accent} strokeWidth="1.2" />
+      <path d="M10 5.5l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z" fill={p.accent} />
+    </svg>
   );
 }
 
@@ -384,7 +615,7 @@ function PhotoWindow({
   box: { left: string; right: string; top: number; height: number };
   windowStyle: CSSProperties;
 }) {
-  const { p, photo, photoUrl, backgroundUrl, popOut, cutout, name } = props;
+  const { p, photo, photoUrl, backgroundUrl, popOut, cutout, name, photoFilter } = props;
   const frameBox = { left: box.left, right: box.right, top: `${box.top}%`, height: `${box.height}%` };
   if (!popOut) {
     return (
@@ -404,6 +635,7 @@ function PhotoWindow({
         alt={name}
         accent={p.accent}
         cutout={cutout}
+        photoFilter={photoFilter}
         className="z-10"
         style={{
           left: box.left,
@@ -422,7 +654,98 @@ function PhotoWindow({
 // ─── Layouts ──────────────────────────────────────────────────────────────────
 
 // Photo on top, name + stats in a band below.
-function ClassicLayout({ p, safeTop, safeBottom, name, jersey, typeLine, stats, rarity, photo }: LayoutProps) {
+// Current game-card layout: rating, position, boot and shirt-number chevron down the left,
+// the name across the middle and up to six stats in one row (labels above values).
+function FcLayout({ p, safeTop, safeBottom, name, position, jersey, typeLine, stats, overall, rarity, photo, nameStyle, nationality, team, badges }: LayoutProps) {
+  const atBottom = badges.placement === "bottom";
+  const atRating = badges.placement === "rating";
+  const shown = stats.slice(0, 6);
+  return (
+    <div className="absolute inset-0">
+      <div className="absolute inset-x-0 top-0" style={{ height: "71%" }}>
+        {photo}
+        <div
+          className="absolute bottom-0 inset-x-0 h-2/5"
+          style={{ background: `linear-gradient(to top, ${p.bg2}, transparent)` }}
+        />
+      </div>
+
+      <div
+        className="absolute z-20 flex flex-col items-center leading-none"
+        style={{ top: `${safeTop + 6}%`, left: "8%", color: p.accent, textShadow: shade }}
+      >
+        {overall !== undefined && (
+          <span className="font-display font-bold" style={{ fontSize: "2.7em" }}>
+            {overall}
+          </span>
+        )}
+        {position && (
+          <span className="font-display font-semibold" style={{ fontSize: "1.05em", marginTop: "0.05em" }}>
+            {position}
+          </span>
+        )}
+        <BootIcon color={p.accent} />
+        {jersey !== undefined && <JerseyChevron value={jersey} color={p.accent} ink={p.bg2} />}
+        {atRating && badges.flag && (
+          <Flag code={nationality} shape={badges.flagShape} style={{ width: "1.5em", marginTop: "0.45em", borderRadius: "0.1em" }} />
+        )}
+        {atRating && badges.crest && team && (
+          <TeamCrest team={team} fallbackColor={p.accent2} style={{ width: "1.4em", height: "1.4em", marginTop: "0.35em" }} />
+        )}
+      </div>
+      <Badge rarity={rarity} top={safeTop + 5} right="7%" />
+      <div className="absolute z-20" style={{ left: "2.5%", top: "50%" }}>
+        <SkillDiamond p={p} />
+      </div>
+
+      <div className="absolute inset-x-[6%] text-center" style={{ top: "64.5%" }}>
+        <NameText name={name} styleId={nameStyle} color={p.accent} size={1.4} />
+      </div>
+
+      {shown.length > 0 && (
+        <div
+          className="absolute inset-x-[7%] grid text-center leading-none"
+          style={{ top: "74%", gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}
+        >
+          {shown.map((s) => (
+            <div key={s.label}>
+              <p className="font-semibold" style={{ fontSize: "0.62em", color: p.muted }}>
+                {s.label}
+              </p>
+              <p className="font-display font-bold" style={{ fontSize: "1.25em", marginTop: "0.12em" }}>
+                {s.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Flag · card type · club crest, like the nation/league/club row of game cards */}
+      <div className="absolute inset-x-[9%] flex items-center justify-center gap-[0.45em]" style={{ bottom: `${safeBottom + 1.5}%` }}>
+        {atBottom && badges.flag && (
+          <Flag code={nationality} shape={badges.flagShape} style={{ width: "1.6em", flexShrink: 0, borderRadius: "0.1em" }} />
+        )}
+        <span
+          className="truncate rounded-full leading-none"
+          style={{
+            fontSize: "0.62em",
+            padding: "0.35em 0.9em",
+            color: p.muted,
+            background: `color-mix(in oklch, ${p.accent} 12%, transparent)`,
+            border: `1px solid color-mix(in oklch, ${p.accent} 30%, transparent)`,
+          }}
+        >
+          {typeLine}
+        </span>
+        {atBottom && badges.crest && team && (
+          <TeamCrest team={team} fallbackColor={p.accent2} style={{ width: "1.45em", height: "1.45em", flexShrink: 0 }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ClassicLayout({ p, safeTop, safeBottom, name, jersey, typeLine, stats, rarity, photo, nameStyle }: LayoutProps) {
   return (
     <div className="absolute inset-0 flex flex-col">
       <div className="flex-1 relative">
@@ -434,12 +757,7 @@ function ClassicLayout({ p, safeTop, safeBottom, name, jersey, typeLine, stats, 
       </div>
       <div className="px-[8%] pt-[0.4em] pb-[0.6em] space-y-[0.4em]">
         <div>
-          <p
-            className="font-display font-bold uppercase leading-tight truncate tracking-wide"
-            style={{ fontSize: "1.3em", color: p.accent }}
-          >
-            {name}
-          </p>
+          <NameText name={name} styleId={nameStyle} color={p.accent} className="!text-left" />
           <p className="leading-none truncate" style={{ fontSize: "0.75em", color: p.muted }}>
             {typeLine}
           </p>
@@ -467,7 +785,8 @@ function ClassicLayout({ p, safeTop, safeBottom, name, jersey, typeLine, stats, 
 }
 
 // Game-card style: rating column top-left, name, two rows of stats.
-function ProLayout({ p, safeTop, safeBottom, name, position, jersey, typeLine, stats, overall, rarity, photo }: LayoutProps) {
+function ProLayout({ p, safeTop, safeBottom, name, position, jersey, typeLine, stats, overall, rarity, photo, nameStyle, nationality, team, badges }: LayoutProps) {
+  const atRating = badges.placement === "rating";
   const shown = stats.slice(0, 6);
   return (
     <div className="absolute inset-0">
@@ -498,15 +817,18 @@ function ProLayout({ p, safeTop, safeBottom, name, position, jersey, typeLine, s
             {jersey}
           </span>
         )}
+        {atRating && badges.flag && (
+          <Flag code={nationality} shape={badges.flagShape} style={{ width: "1.5em", marginTop: "0.45em", borderRadius: "0.1em" }} />
+        )}
+        {atRating && badges.crest && team && (
+          <TeamCrest team={team} fallbackColor={p.accent2} style={{ width: "1.4em", height: "1.4em", marginTop: "0.35em" }} />
+        )}
       </div>
       <Badge rarity={rarity} top={safeTop + 4} right="6%" />
 
-      <p
-        className="absolute inset-x-[6%] text-center font-display font-bold uppercase leading-tight truncate tracking-wide"
-        style={{ top: "62.5%", fontSize: "1.35em", color: p.accent }}
-      >
-        {name}
-      </p>
+      <div className="absolute inset-x-[6%] text-center" style={{ top: "62.5%" }}>
+        <NameText name={name} styleId={nameStyle} color={p.accent} size={1.35} />
+      </div>
       <div
         className="absolute inset-x-[22%] h-px"
         style={{ top: "71%", background: `linear-gradient(90deg, transparent, ${p.accent}, transparent)` }}
@@ -753,6 +1075,7 @@ function MinimalLayout(props: LayoutProps) {
 }
 
 const LAYOUT_COMPONENTS: Record<CardDesign["layout"], (props: LayoutProps) => ReactNode> = {
+  fc: FcLayout,
   classic: ClassicLayout,
   pro: ProLayout,
   sticker: StickerLayout,

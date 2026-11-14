@@ -301,6 +301,15 @@
     --gx: 90%;
     --gy: 80%;
   }
+
+  /* Aura around promo-style cards: drifting smoke/fire, or a gently breathing glow */
+  .card-aura-spin { animation: card-aura-spin 14s linear infinite; }
+  .card-aura-pulse { animation: card-aura-pulse 3.5s ease-in-out infinite; }
+  @keyframes card-aura-spin { to { rotate: 1turn; } }
+  @keyframes card-aura-pulse { 50% { opacity: 0.55; scale: 0.94; } }
+  @media (prefers-reduced-motion: reduce) {
+    .card-aura-spin, .card-aura-pulse { animation: none; }
+  }
 }
 
 @property --gx { syntax: "<percentage>"; inherits: true; initial-value: 30%; }

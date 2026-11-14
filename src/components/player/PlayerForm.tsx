@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { FormField, RequiredNote, fieldA11y } from "@/components/forms/FormField";
 import { intField, todayISO } from "@/lib/validation";
 import { PhotoUpload } from "./PhotoUpload";
+import { COUNTRIES, Flag, countryName } from "@/components/card/Flag";
 import type { Player, PlayerPosition } from "@/types";
 import toast from "react-hot-toast";
 
@@ -58,6 +59,7 @@ const schema = z.object({
       (v) => v === "" || Number(v.slice(0, 4)) >= OLDEST_BIRTH_YEAR,
       "Zkontrolujte prosím rok narození."
     ),
+  nationality: z.string(),
   isPublic: z.boolean(),
 });
 
@@ -89,6 +91,7 @@ export function PlayerForm({ userId, player, onSubmit, onPhotoUpload }: PlayerFo
       position: player?.position,
       jerseyNumber: player?.jerseyNumber?.toString() ?? "",
       dateOfBirth: player?.dateOfBirth ?? "",
+      nationality: player?.nationality ?? "CZ",
       isPublic: player?.isPublic ?? false,
     },
   });
@@ -103,6 +106,7 @@ export function PlayerForm({ userId, player, onSubmit, onPhotoUpload }: PlayerFo
         position: values.position,
         jerseyNumber: values.jerseyNumber ? Number(values.jerseyNumber) : undefined,
         dateOfBirth: values.dateOfBirth || undefined,
+        nationality: values.nationality,
         isPublic: values.isPublic,
         photoURL,
       });
@@ -190,6 +194,37 @@ export function PlayerForm({ userId, player, onSubmit, onPhotoUpload }: PlayerFo
                   {POSITIONS.map((pos) => (
                     <SelectItem key={pos} value={pos}>
                       {positionLabels[pos]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </FormField>
+
+        <FormField id="nationality" label="Národnost" hint="Vlajka se zobrazí dole na kartičce.">
+          <Controller
+            control={control}
+            name="nationality"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={(v) => field.onChange(v)}>
+                <SelectTrigger className="w-full" {...fieldA11y("nationality", undefined, true)}>
+                  <SelectValue>
+                    {(value: string) => (
+                      <span className="flex items-center gap-2">
+                        <Flag code={value} style={{ width: 20, borderRadius: 2 }} />
+                        {countryName(value)}
+                      </span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      <span className="flex items-center gap-2">
+                        <Flag code={c.code} style={{ width: 20, borderRadius: 2 }} />
+                        {c.nameCs}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

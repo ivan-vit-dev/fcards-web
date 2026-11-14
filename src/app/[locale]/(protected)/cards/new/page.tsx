@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CardGeneratorWizard } from "@/components/card/CardGeneratorWizard";
+import { CardReveal } from "@/components/card/CardReveal";
 import { useAuthStore } from "@/store/authStore";
 import {
   usePlayersStore,
@@ -20,7 +21,7 @@ import {
   createCard,
   updateUserDoc,
 } from "@/lib/firebaseServices";
-import { canGenerateCard } from "@/lib/cardEngine";
+import { canGenerateCard, teamSnapshot } from "@/lib/cardEngine";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import { useSyncProgress } from "@/hooks/use-progress";
 import { currentMonth, getCardsGenerated, getUpgradeReason } from "@/lib/subscriptionEngine";
@@ -31,7 +32,7 @@ export default function NewCardPage() {
   const { user, setUser } = useAuthStore();
   const syncProgress = useSyncProgress();
   const { players, setPlayers } = usePlayersStore();
-  const { setTeams } = useTeamsStore();
+  const { teams, setTeams } = useTeamsStore();
   const { addCard } = useCardsStore();
   const router = useRouter();
   const params = useParams();
@@ -40,6 +41,7 @@ export default function NewCardPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [revealed, setRevealed] = useState<Card | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -107,7 +109,15 @@ export default function NewCardPage() {
   const handleGenerate = async (draft: Partial<Card>) => {
     if (!user) return;
     try {
-      const card = await createCard({ ...draft, userId: user.uid });
+      // Snapshot flag + club onto the card, so public viewers see them without the player/team docs.
+      const player = players.find((p) => p.id === draft.playerId);
+      const team = teams.find((t) => t.id === player?.teamId);
+      const card = await createCard({
+        ...draft,
+        userId: user.uid,
+        nationality: player?.nationality ?? "CZ",
+        ...(team && { team: teamSnapshot(team) }),
+      });
       addCard(card);
       const counter = {
         cardsMonth: currentMonth(),
@@ -116,8 +126,8 @@ export default function NewCardPage() {
       await updateUserDoc(user.uid, counter);
       setUser({ ...user, ...counter });
       void syncProgress();
-      toast.success("Kartička vytvořena!");
-      router.push(`/${locale}/cards/${card.id}`);
+      // Show the pack opening; the card detail opens when the user is done admiring it.
+      setRevealed(card);
     } catch (err) {
       console.warn("[NewCardPage] createCard", err);
       toast.error("Kartičku se nepodařilo vytvořit. Zkuste to prosím znovu.");
@@ -145,6 +155,14 @@ export default function NewCardPage() {
           onGenerate={handleGenerate}
         />
       </div>
+
+      {revealed && (
+        <CardReveal
+          card={revealed}
+          player={players.find((p) => p.id === revealed.playerId)}
+          onDone={() => router.push(`/${locale}/cards/${revealed.id}`)}
+        />
+      )}
     </div>
   );
 }

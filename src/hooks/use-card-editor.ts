@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { updateCard } from "@/lib/firebaseServices";
 import { exportCardPNG } from "@/lib/cardExport";
 import { resolveDesign, type Preset } from "@/lib/cardDesign";
-import type { Card, CardDesign, Player, Rarity, CardStats } from "@/types";
+import type { Card, CardBadges, CardDesign, Player, Rarity, CardStats } from "@/types";
 import toast from "react-hot-toast";
 
 export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
@@ -22,7 +22,12 @@ export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
   }, []);
 
   const updateRarity = useCallback((rarity: Rarity) => update({ rarity }), [update]);
+  const updateIdentity = useCallback(
+    (patch: Pick<Card, "nationality" | "team">) => update(patch),
+    [update]
+  );
   const updateSeason = useCallback((season: string) => update({ season }), [update]);
+  const updateBadges = useCallback((badges: CardBadges) => update({ badges }), [update]);
 
   const updateStat = useCallback((key: keyof CardStats, value: number) => {
     setCard((c) => ({ ...c, cardStats: { ...c.cardStats, [key]: value } }));
@@ -52,6 +57,9 @@ export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
         season: card.season,
         templateId: card.templateId,
         design: card.design,
+        nationality: card.nationality,
+        team: card.team,
+        badges: card.badges,
       });
       setIsDirty(false);
       toast.success("Kartička uložena.");
@@ -89,6 +97,8 @@ export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
     isExporting,
     cardNodeRef,
     updateRarity,
+    updateIdentity,
+    updateBadges,
     updateStat,
     updateSeason,
     applyPreset,

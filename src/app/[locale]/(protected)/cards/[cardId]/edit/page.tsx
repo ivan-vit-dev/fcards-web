@@ -14,7 +14,9 @@ import { CardPreview } from "@/components/card/CardPreview";
 import { DesignGallery } from "@/components/card/DesignGallery";
 import { useCardEditor } from "@/hooks/use-card-editor";
 import { useAuthStore } from "@/store/authStore";
-import { getCardDoc, getPlayerDoc } from "@/lib/firebaseServices";
+import { getCardDoc, getPlayerDoc, getTeamDoc } from "@/lib/firebaseServices";
+import { teamSnapshot } from "@/lib/cardEngine";
+import toast from "react-hot-toast";
 import { CUSTOM_DESIGN_TIER, resolveDesign, type Preset } from "@/lib/cardDesign";
 import { tierAtLeast } from "@/lib/subscriptionEngine";
 import type { Card, Player } from "@/types";
@@ -68,6 +70,8 @@ function EditorInner({
     isExporting,
     cardNodeRef,
     updateRarity,
+    updateIdentity,
+    updateBadges,
     updateStat,
     updateSeason,
     applyPreset,
@@ -126,6 +130,20 @@ function EditorInner({
               onUpdateStat={updateStat}
               onUpdateSeason={updateSeason}
               onUpdateRarity={updateRarity}
+              onUpdateBadges={updateBadges}
+              onRefreshIdentity={async () => {
+                try {
+                  const team = player?.teamId ? await getTeamDoc(player.teamId) : null;
+                  updateIdentity({
+                    nationality: player?.nationality ?? "CZ",
+                    team: team ? teamSnapshot(team) : card.team,
+                  });
+                  toast.success(team ? "Vlajka a klub načteny." : "Vlajka načtena — hráč není v žádném týmu.");
+                } catch (err) {
+                  console.warn("[Editor] refresh identity", err);
+                  toast.error("Tým se nepodařilo načíst.");
+                }
+              }}
             />
           )}
           {activeTab === "look" && (

@@ -6,6 +6,8 @@ import type {
   CardStats,
   Rarity,
   User,
+  Team,
+  CardTeam,
 } from "@/types";
 
 export function canGenerateCard(user: User): boolean {
@@ -163,3 +165,12 @@ export const CARD_TYPE_DESCRIPTIONS: Record<CardType, string> = {
   champion: "Šampionská kartička pro vítěze",
   rookie: "Prvotní kartička nového hráče",
 };
+
+// What a card keeps of the player's team: enough to draw the club crest without the team doc.
+export function teamSnapshot(team: Pick<Team, "name" | "logoURL" | "primaryColor">): CardTeam {
+  return {
+    name: team.name,
+    ...(team.logoURL && { logoUrl: team.logoURL }),
+    ...(team.primaryColor && { color: team.primaryColor }),
+  };
+}

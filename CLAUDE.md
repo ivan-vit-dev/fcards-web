@@ -106,6 +106,8 @@ No real-time Firestore listeners except one: while `card.aiStatus === "pending" 
 - Size everything inside a card in `em`/`%` of the card (sizes sm/md/lg/xl set width + base font). `%` padding/margin resolve against width — use spacer elements or absolute `top`/`bottom` for vertical offsets.
 - Export: `html-to-image` on the rendered card at `pixelRatio: 3` → `cards/{cardId}/output.png` → `card.imageUrl`. Print passes `flat` (no rarity glow halo).
 - Photo layers: `card.backgroundUrl` (AI stadium) behind `card.photoUrl ?? player.photoURL`. `design.popOut` lets the player break out of window layouts (needs a background-removed photo).
+- Illustrated backgrounds (marble, flames, crystal, neon burst…) are SVG data URIs drawn in the palette colours (`art()` in cardDesign.ts, turbulence filters for organic textures). `design.aura` spills light/smoke outside the card on screen only (skipped when `flat`). Signature names use `--font-script` (Great Vibes, set in `[locale]/layout.tsx`).
+- Flags: SVGs from the `country-flag-icons` package copied to `public/flags/` (loaded per flag, not bundled). After updating the package, re-copy: `cp node_modules/country-flag-icons/3x2/*.svg public/flags/`. Czech names via `Intl.DisplayNames` (`components/card/Flag.tsx`).
 - Visual direction (researched 2026-10): few iconic silhouettes, no dotted/striped decoration; gradients, stadium beams, geometric facets, giant jersey number, Topps-style refractor/prizm/lava/superfractor finishes, fine film grain. `interactive` cards tilt toward the pointer with a moving glare via registered CSS properties `--rx/--ry/--gx/--gy/--glare` (globals.css).
 
 ### AI calls

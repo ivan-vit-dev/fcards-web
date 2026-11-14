@@ -15,7 +15,9 @@ import {
   Download,
   Loader2,
   Printer,
+  Gift,
 } from "lucide-react";
+import { CardReveal } from "@/components/card/CardReveal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -77,6 +79,7 @@ export default function CardDetailPage() {
   );
   const [loading, setLoading] = useState(!card);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [revealOpen, setRevealOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -251,7 +254,14 @@ export default function CardDetailPage() {
               </Button>
             </Link>
           </div>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setRevealOpen(true)}>
+            <Gift className="h-3.5 w-3.5" />
+            Rozbalit znovu
+          </Button>
         </div>
+        {revealOpen && (
+          <CardReveal card={card} player={player ?? undefined} onDone={() => setRevealOpen(false)} doneLabel="Zavřít" />
+        )}
 
         <div className="space-y-4 flex-1 w-full">
           <div className="space-y-2">
