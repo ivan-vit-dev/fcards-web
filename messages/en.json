@@ -163,6 +163,8 @@
     "saving": "Saving...",
     "exporting": "Exporting...",
     "unsavedChanges": "Unsaved changes",
+    "saveAsNew": "Save as new",
+    "saveAsNewHint": "Creates a separate new card with your changes; this one stays as it is",
     "noTemplates": "No templates available",
     "selectTemplate": "Select a template",
     "exportSuccess": "PNG saved to gallery.",

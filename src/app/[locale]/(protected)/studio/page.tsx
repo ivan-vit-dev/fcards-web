@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   BookOpen,
+  CopyPlus,
   Crop,
   ImageOff,
   Info,
@@ -40,6 +41,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { PhotoCropper } from "@/components/studio/PhotoCropper";
 import {
   addCardPhotoVersion,
+  duplicateCard,
   removeCardPhotoVersion,
   getCardDoc,
   getCards,
@@ -167,7 +169,7 @@ function StudioContent() {
   const locale = (params?.locale as string) ?? "cs";
   const searchParams = useSearchParams();
   const { user, setUser } = useAuthStore();
-  const { cards, setCards, updateCard } = useCardsStore();
+  const { cards, setCards, updateCard, addCard } = useCardsStore();
   const { players, setPlayers } = usePlayersStore();
   const { isRunning, callFunction } = useAIGeneration();
 
@@ -177,6 +179,7 @@ function StudioContent() {
   const [upgradeReason, setUpgradeReason] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [versionToDelete, setVersionToDelete] = useState<PhotoVersion | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
   // AI job waiting for the user's consent (AIConsentDialog).
   const [pendingJob, setPendingJob] = useState<Parameters<typeof run> | null>(null);
 
@@ -304,6 +307,26 @@ function StudioContent() {
     toast.success("Výřez uložen.");
   };
 
+  const duplicateForStudio = async () => {
+    if (!card || busy || duplicating) return;
+    setDuplicating(true);
+    try {
+      const copy = await duplicateCard(card.id);
+      addCard(copy);
+      setSelectedId(copy.id);
+      toast.success("Kopie vytvořena — teď upravujete ji. Původní kartička zůstala beze změn.");
+    } catch (err) {
+      if ((err as { code?: string }).code === "functions/resource-exhausted") {
+        setUpgradeReason(getUpgradeReason(tier, "generate"));
+      } else {
+        console.warn("[Studio] duplicate", err);
+        toast.error("Kopii se nepodařilo vytvořit.");
+      }
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const removeStadium = async () => {
     if (!card) return;
     await removeCardBackground(card.id);
@@ -377,6 +400,19 @@ function StudioContent() {
         {/* Live card + photo history */}
         <div className="lg:sticky lg:top-4 shrink-0 w-full max-w-[280px] space-y-4">
           <CardPreview card={card} player={player} size="lg" interactive />
+
+          {/* AI steps change this card directly — a copy keeps the original untouched. */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || duplicating}
+            onClick={duplicateForStudio}
+            className="w-full gap-1.5"
+            title="Vytvoří samostatnou kopii; AI úpravy pak měníte jen na ní a původní kartička zůstane beze změn."
+          >
+            {duplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CopyPlus className="h-3.5 w-3.5" />}
+            Pracovat na kopii
+          </Button>
 
           {versions.length > 0 && (
             <div className="space-y-2">

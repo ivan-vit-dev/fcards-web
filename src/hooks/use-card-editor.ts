@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { updateCard } from "@/lib/firebaseServices";
+import { duplicateCard, updateCard } from "@/lib/firebaseServices";
 import { exportCardPNG } from "@/lib/cardExport";
 import { resolveDesign, type Preset } from "@/lib/cardDesign";
 import type { Card, CardBadges, CardDesign, Player, Rarity, CardStats } from "@/types";
@@ -48,19 +48,45 @@ export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
     []
   );
 
+  // The fields the editor changes — saved onto this card, or onto a new copy.
+  const edits = useCallback(
+    (): Partial<Card> => ({
+      rarity: card.rarity,
+      cardStats: card.cardStats,
+      season: card.season,
+      templateId: card.templateId,
+      design: card.design,
+      nationality: card.nationality,
+      team: card.team,
+      badges: card.badges,
+    }),
+    [card]
+  );
+
+  /** Saves the edits as a brand-new card; the card being edited stays untouched. */
+  const saveAsNew = useCallback(async (): Promise<Card | null> => {
+    setIsSaving(true);
+    try {
+      const created = await duplicateCard(card.id, edits());
+      toast.success("Uloženo jako nová kartička. Původní zůstala beze změn.");
+      return created;
+    } catch (err) {
+      if ((err as { code?: string }).code === "functions/resource-exhausted") {
+        toast.error("Tento měsíc už nemůžete vytvořit další kartičku.");
+      } else {
+        console.warn("[useCardEditor] saveAsNew", err);
+        toast.error("Kopii se nepodařilo uložit.");
+      }
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [card.id, edits]);
+
   const save = useCallback(async () => {
     setIsSaving(true);
     try {
-      await updateCard(card.id, {
-        rarity: card.rarity,
-        cardStats: card.cardStats,
-        season: card.season,
-        templateId: card.templateId,
-        design: card.design,
-        nationality: card.nationality,
-        team: card.team,
-        badges: card.badges,
-      });
+      await updateCard(card.id, edits());
       setIsDirty(false);
       toast.success("Kartička uložena.");
     } catch (err) {
@@ -69,7 +95,7 @@ export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
     } finally {
       setIsSaving(false);
     }
-  }, [card]);
+  }, [card.id, edits]);
 
   const exportPNG = useCallback(async () => {
     if (!cardNodeRef.current) {
@@ -104,6 +130,7 @@ export function useCardEditor(initialCard: Card, initialPlayer: Player | null) {
     applyPreset,
     updateDesign,
     save,
+    saveAsNew,
     exportPNG,
   };
 }

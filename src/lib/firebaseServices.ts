@@ -481,6 +481,21 @@ export async function createCard(data: Partial<Card>): Promise<Card> {
   return created ?? ({ id: res.id, aiStatus: "done", effect: "none", shareCount: 0, printCount: 0, isPublic: false, ...data } as Card);
 }
 
+/**
+ * Creates an independent copy of a card ("save as new"), optionally with changes applied.
+ * The server copies the card's own images so deleting either card never breaks the other,
+ * and counts the copy against the monthly card limit (`functions/resource-exhausted`).
+ */
+export async function duplicateCard(sourceCardId: string, changes: Partial<Card> = {}): Promise<Card> {
+  const { data: res } = await httpsCallable<{ card: Partial<Card>; sourceCardId: string }, { id: string }>(
+    functions,
+    "createCard"
+  )({ card: changes, sourceCardId });
+  const created = await getCardDoc(res.id);
+  if (!created) throw new Error("Duplicated card not found.");
+  return created;
+}
+
 export async function updateCard(cardId: string, data: Partial<Card>): Promise<void> {
   await updateDoc(doc(db, "cards", cardId), {
     ...data,

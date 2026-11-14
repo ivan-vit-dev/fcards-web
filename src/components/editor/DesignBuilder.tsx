@@ -17,6 +17,7 @@ import {
   type AuraId,
   type NameStyleId,
   type PhotoFilterId,
+  frameBackground,
   paletteFromColors,
   resolvePalette,
   shapeClipPath,
@@ -113,7 +114,7 @@ export function DesignBuilder({ card, player, design, locked, locale, onChange }
                 <div
                   className="w-8 h-11"
                   style={{
-                    background: FRAMES[design.frame].background(palette),
+                    background: frameBackground(design.frame, palette),
                     clipPath: shapeClipPath(id),
                     borderRadius: def.radius !== undefined ? def.radius * 32 : 0,
                   }}
@@ -199,10 +200,30 @@ export function DesignBuilder({ card, player, design, locked, locale, onChange }
       </Section>
 
       <Section title="Rám">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
           {(Object.keys(FRAMES) as FrameId[]).map((id) => (
             <Option key={id} active={design.frame === id} label={FRAMES[id].nameCs} onClick={() => onChange({ frame: id })}>
-              <div className="h-8 w-8 rounded-full border border-border" style={{ background: FRAMES[id].background(palette) }} />
+              {/* A frame corner big enough to show its drawn surface */}
+              <div
+                className="relative h-12 w-9 overflow-hidden rounded-[3px]"
+                style={{ background: frameBackground(id, palette), fontSize: 9 }}
+              >
+                <div
+                  className="absolute rounded-[1px]"
+                  style={{ inset: "22% 24%", background: PATTERNS.clean.css(palette), boxShadow: "0 0 0 1px oklch(0 0 0 / 0.35)" }}
+                />
+                {FRAMES[id].studs && (
+                  <div
+                    className="absolute left-[3px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+                    style={{
+                      background:
+                        FRAMES[id].studs!.kind === "gem"
+                          ? (FRAMES[id].studs!.color?.(palette) ?? palette.accent2)
+                          : "radial-gradient(circle at 35% 30%, white, oklch(0.4 0.01 250))",
+                    }}
+                  />
+                )}
+              </div>
             </Option>
           ))}
         </div>

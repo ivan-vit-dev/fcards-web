@@ -6,7 +6,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import Replicate from "replicate";
 import sharp from "sharp";
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 
 import { FREE_MODE_AI_CREDITS, STRIPE_SECRET_KEY, cancelSubscriptionsFor, effectiveTier, paidMode } from "./billing";
@@ -590,6 +590,73 @@ const SERVER_CARD_FIELDS = [
 ];
 const MAX_CARD_BYTES = 100_000;
 
+// Same alphabet and length as generateShareSlug() in src/lib/cardEngine.ts.
+function newShareSlug(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: 8 }, () => chars[randomInt(chars.length)]).join("");
+}
+
+function cardsUsed(user: admin.firestore.DocumentData, month: string) {
+  const used: number = user.cardsMonth === month ? (user.cardsGeneratedThisMonth ?? 0) : 0;
+  const limit = CARDS_PER_MONTH[effectiveTier(user)] ?? 0; // free mode → "club" → unlimited
+  return { used, full: user.role !== "superAdmin" && limit !== -1 && used >= limit };
+}
+
+/** Storage path of a Firebase download URL in our bucket, or null for anything else. */
+function storagePathOf(url: unknown, bucket: string): string | null {
+  if (typeof url !== "string") return null;
+  const m = url.match(/\/v0\/b\/([^/]+)\/o\/([^?]+)/);
+  return m && m[1] === bucket ? decodeURIComponent(m[2]) : null;
+}
+
+// A duplicate must not share files with its source: deleting a card removes cards/{id}/ and
+// its Studio crops (onCardDeleted). So every image that lives in the source's own folders is
+// copied into the new card's folders and its URL rewritten; shared files (player photos) stay.
+async function copyCardImages(
+  data: Record<string, unknown>,
+  uid: string,
+  sourceId: string,
+  targetId: string
+): Promise<void> {
+  const bucket = storage.bucket();
+  const own = [`cards/${sourceId}/`, `users/${uid}/photos/crop-${sourceId}-`];
+  const copied = new Map<string, string>();
+
+  const copy = async (url: unknown): Promise<unknown> => {
+    const path = storagePathOf(url, bucket.name);
+    if (!path || !own.some((prefix) => path.startsWith(prefix))) return url;
+    if (copied.has(path)) return copied.get(path);
+    const target = path.startsWith(own[0])
+      ? `cards/${targetId}/${path.slice(own[0].length)}`
+      : `${own[1].replace(sourceId, targetId)}${path.slice(own[1].length)}`;
+    try {
+      await bucket.file(path).copy(bucket.file(target));
+      const next = await getDownloadURL(bucket.file(target));
+      copied.set(path, next);
+      return next;
+    } catch (err) {
+      console.warn("[duplicateCard] copy failed", path, (err as Error).message);
+      return undefined; // missing file — drop the reference rather than point at the source
+    }
+  };
+
+  for (const key of ["photoUrl", "backgroundUrl"]) {
+    if (key in data) {
+      const next = await copy(data[key]);
+      if (next === undefined) delete data[key];
+      else data[key] = next;
+    }
+  }
+  if (Array.isArray(data.photoVersions)) {
+    const versions = [];
+    for (const v of data.photoVersions as { url: string }[]) {
+      const url = await copy(v.url);
+      if (typeof url === "string") versions.push({ ...v, url });
+    }
+    data.photoVersions = versions;
+  }
+}
+
 export const createCard = onCall(async (request) => {
   const uid = requireAuth(request);
   const input = request.data?.card;
@@ -599,22 +666,46 @@ export const createCard = onCall(async (request) => {
   if (JSON.stringify(input).length > MAX_CARD_BYTES) {
     throw new HttpsError("invalid-argument", "Card data too large.");
   }
-  const data: Record<string, unknown> = { ...input };
-  for (const key of SERVER_CARD_FIELDS) delete data[key];
+  const changes: Record<string, unknown> = { ...input };
+  for (const key of SERVER_CARD_FIELDS) delete changes[key];
+
+  const userRef = db.doc(`users/${uid}`);
+  const cardRef = db.collection("cards").doc();
+
+  // Duplicate ("save as new"): start from the source card, apply the client's changes on top.
+  const sourceId = request.data?.sourceCardId;
+  let data = changes;
+  if (sourceId !== undefined) {
+    const source = await db.doc(`cards/${requireString(sourceId, "sourceCardId")}`).get();
+    if (!source.exists || source.get("userId") !== uid) {
+      throw new HttpsError("not-found", "Card not found.");
+    }
+    // Check the limit before copying files, so a full month doesn't leave orphaned copies.
+    if (cardsUsed((await userRef.get()).data() ?? {}, currentMonth()).full) {
+      throw new HttpsError("resource-exhausted", "Monthly card limit reached.");
+    }
+    const base: Record<string, unknown> = { ...source.data() };
+    for (const key of SERVER_CARD_FIELDS) if (key !== "photoVersions") delete base[key];
+    // The exported PNG shows the source's look; the copy gets its own on its next export.
+    delete base.imageUrl;
+    delete base.thumbnailUrl;
+    delete changes.imageUrl;
+    delete changes.thumbnailUrl;
+    data = { ...base, ...changes, shareSlug: newShareSlug() };
+    await copyCardImages(data, uid, source.id, cardRef.id);
+  }
+
   const playerId = requireString(data.playerId, "playerId");
   requireString(data.shareSlug, "shareSlug");
   if (!(await db.doc(`users/${uid}/players/${playerId}`).get()).exists) {
     throw new HttpsError("not-found", "Player not found.");
   }
 
-  const userRef = db.doc(`users/${uid}`);
-  const cardRef = db.collection("cards").doc();
   await db.runTransaction(async (tx) => {
     const user = (await tx.get(userRef)).data() ?? {};
     const month = currentMonth();
-    const used: number = user.cardsMonth === month ? (user.cardsGeneratedThisMonth ?? 0) : 0;
-    const limit = CARDS_PER_MONTH[effectiveTier(user)] ?? 0; // free mode → "club" → unlimited
-    if (user.role !== "superAdmin" && limit !== -1 && used >= limit) {
+    const { used, full } = cardsUsed(user, month);
+    if (full) {
       throw new HttpsError("resource-exhausted", "Monthly card limit reached.");
     }
     tx.set(cardRef, {

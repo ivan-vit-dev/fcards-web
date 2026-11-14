@@ -163,6 +163,8 @@
     "saving": "Ukládám...",
     "exporting": "Exportuji...",
     "unsavedChanges": "Neuložené změny",
+    "saveAsNew": "Uložit jako novou",
+    "saveAsNewHint": "Vytvoří novou samostatnou kartičku se změnami; tahle zůstane beze změn",
     "noTemplates": "Žádné šablony",
     "selectTemplate": "Vyberte šablonu",
     "exportSuccess": "PNG uloženo do galerie.",

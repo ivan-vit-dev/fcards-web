@@ -515,7 +515,122 @@ export interface FrameDef {
   inner?: { gap: number; line: number; background: (p: Palette) => string };
   /** Glow colour around the card on screen (neon frames) instead of the rarity glow. */
   glow?: (p: Palette) => string;
+  /** Drawn surface laid over `background` (engraving, hammered metal, carbon weave…) —
+   *  CSS background layers; tiles are sized in `em` so they scale with the card. */
+  texture?: (p: Palette) => string;
+  /** Gems or rivets set into the left and right side of the frame, at these heights (0–1). */
+  studs?: { kind: "gem" | "rivet"; at: number[]; color?: (p: Palette) => string };
+  /** Emblem on the top edge, centred (sits in the notch of crown shapes). */
+  crest?: { kind: "star" | "ball" | "gem"; color?: (p: Palette) => string };
+  /** Metal bars standing out of the left and right side (screen/PNG only — not on print). */
+  sideBars?: (p: Palette) => string;
 }
+
+/** Top and bottom edge of a shape at horizontal position x (0–100), in the 100 × 140 box. */
+export function shapeEdgeAt(shape: ShapeId, x: number): { top: number; bottom: number } {
+  const poly = SHAPES[shape].polygon;
+  if (!poly) return { top: 0, bottom: 140 };
+  const ys: number[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i];
+    const [x2, y2] = poly[(i + 1) % poly.length];
+    if ((x1 <= x && x <= x2) || (x2 <= x && x <= x1)) {
+      ys.push(x1 === x2 ? Math.min(y1, y2) : y1 + ((x - x1) / (x2 - x1)) * (y2 - y1));
+    }
+  }
+  return ys.length ? { top: Math.min(...ys), bottom: Math.max(...ys) } : { top: 0, bottom: 140 };
+}
+
+const GOLD_METAL =
+  "linear-gradient(135deg, oklch(0.93 0.1 95), oklch(0.7 0.15 72) 30%, oklch(0.95 0.08 92) 52%, oklch(0.62 0.14 65) 75%, oklch(0.88 0.12 88))";
+const SILVER_METAL =
+  "linear-gradient(135deg, oklch(0.98 0 0), oklch(0.66 0.01 250) 30%, oklch(0.95 0.005 250) 52%, oklch(0.55 0.01 250) 75%, oklch(0.9 0 0))";
+const GOLD_LINE = () => "linear-gradient(135deg, oklch(0.96 0.08 95), oklch(0.68 0.14 70) 50%, oklch(0.92 0.1 90))";
+
+/** A repeating SVG tile as one CSS background layer. */
+function tile(body: string, w: number, h: number, size: string): string {
+  return `${svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}</svg>`)} 0 0 / ${size} repeat`;
+}
+
+/** An SVG stretched over the whole card (300 × 420 = card ratio, so nothing distorts).
+ *  Literal sizes: these run at module load, before ART_W/ART_H are initialised. */
+function stretched(body: string): string {
+  return `${svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420" viewBox="0 0 300 420" preserveAspectRatio="none">${body}</svg>`)} center / 100% 100% no-repeat`;
+}
+
+// Guilloche engraving: two interlocking waves, cut dark with a bright lower lip.
+const GUILLOCHE = (ink: string) =>
+  tile(
+    `<g fill="none" stroke-width="0.7"><path d="M0 5 Q5 0 10 5 T20 5" stroke="white" stroke-opacity="0.55" transform="translate(0 0.7)"/><path d="M0 5 Q5 10 10 5 T20 5" stroke="white" stroke-opacity="0.55" transform="translate(0 0.7)"/><path d="M0 5 Q5 0 10 5 T20 5" stroke="${ink}"/><path d="M0 5 Q5 10 10 5 T20 5" stroke="${ink}"/></g>`,
+    20,
+    10,
+    "1.2em 0.6em"
+  );
+
+// Filigree: paired scroll curls.
+const FILIGREE = (ink: string) =>
+  tile(
+    `<g fill="none" stroke-linecap="round" stroke-width="1.1"><path d="M1 12 C1 3 11 3 11 9 C11 13 6 13 6 10" stroke="white" stroke-opacity="0.5" transform="translate(0.5 0.8)"/><path d="M23 12 C23 21 13 21 13 15 C13 11 18 11 18 14" stroke="white" stroke-opacity="0.5" transform="translate(0.5 0.8)"/><path d="M1 12 C1 3 11 3 11 9 C11 13 6 13 6 10" stroke="${ink}"/><path d="M23 12 C23 21 13 21 13 15 C13 11 18 11 18 14" stroke="${ink}"/><circle cx="12" cy="12" r="1" fill="${ink}"/></g>`,
+    24,
+    24,
+    "1.1em 1.1em"
+  );
+
+// Hammered metal: noise relief lit from the top left.
+const HAMMERED = stretched(
+  `<filter id="h" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="4" result="n"/><feSpecularLighting in="n" surfaceScale="4" specularConstant="1" specularExponent="16" lighting-color="white" result="s"><feDistantLight azimuth="225" elevation="40"/></feSpecularLighting><feComposite in="s" in2="n" operator="arithmetic" k1="0" k2="0.85" k3="0" k4="0"/></filter><rect width="300" height="420" filter="url(#h)"/>`
+);
+
+const CARBON = tile(
+  `<defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a3a"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient><linearGradient id="b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2c2c2c"/><stop offset="1" stop-color="#080808"/></linearGradient></defs><rect width="4" height="4" fill="url(#a)"/><rect x="4" y="4" width="4" height="4" fill="url(#a)"/><rect x="4" width="4" height="4" fill="url(#b)"/><rect y="4" width="4" height="4" fill="url(#b)"/>`,
+  8,
+  8,
+  "0.5em 0.5em"
+);
+
+// Oil-slick holographic foil: a rainbow warped by noise.
+const holoFoil = (opacity: number, seed = 7) =>
+  stretched(
+    `<defs><linearGradient id="r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9ad5"/><stop offset="0.2" stop-color="#9ab8ff"/><stop offset="0.4" stop-color="#8ff5e6"/><stop offset="0.6" stop-color="#c6ff9a"/><stop offset="0.8" stop-color="#ffe08a"/><stop offset="1" stop-color="#ff9ad5"/></linearGradient><filter id="d" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="${seed}"/><feDisplacementMap in="SourceGraphic" scale="140" xChannelSelector="R" yChannelSelector="G"/></filter></defs><rect x="-60" y="-60" width="420" height="540" fill="url(#r)" filter="url(#d)" opacity="${opacity}"/>`
+  );
+const HOLO_FOIL = holoFoil(1);
+
+// Cut-gem facets: a diamond grid, each diamond split into four lit/shaded faces.
+const FACETS = tile(
+  `<polygon points="0,6 6,0 6,6" fill="white" fill-opacity="0.55"/><polygon points="6,0 12,6 6,6" fill="white" fill-opacity="0.18"/><polygon points="12,6 6,12 6,6" fill="black" fill-opacity="0.35"/><polygon points="6,12 0,6 6,6" fill="black" fill-opacity="0.12"/>` +
+    `<polygon points="0,0 6,0 0,6" fill="black" fill-opacity="0.35"/><polygon points="6,0 12,0 12,6" fill="black" fill-opacity="0.12"/><polygon points="12,6 12,12 6,12" fill="white" fill-opacity="0.55"/><polygon points="0,6 6,12 0,12" fill="white" fill-opacity="0.18"/>`,
+  12,
+  12,
+  "0.9em 0.9em"
+);
+
+// Dragon scales: staggered rows of lit discs, each row overlapping the one above.
+const SCALES = (c: string) => {
+  const s = (cx: number, cy: number) => `<circle cx="${cx}" cy="${cy}" r="6.4" fill="url(#s)" stroke="black" stroke-opacity="0.45" stroke-width="0.6"/>`;
+  return tile(
+    `<defs><radialGradient id="s" cx="0.5" cy="0.15" r="0.9"><stop offset="0" stop-color="white" stop-opacity="0.85"/><stop offset="0.35" stop-color="${c}"/><stop offset="1" stop-color="black" stop-opacity="0.6"/></radialGradient></defs>` +
+      s(0, 0) + s(12, 0) + s(6, 6) + s(0, 12) + s(12, 12),
+    12,
+    12,
+    "0.8em 0.8em"
+  );
+};
+
+// Twisted rope: diagonal ridges with a lit and a shaded side.
+const ROPE = tile(
+  `<g stroke-linecap="square"><path d="M-2 6 L6 -2 M2 10 L10 2" stroke="black" stroke-opacity="0.4" stroke-width="2.2"/><path d="M-2 4.6 L4.6 -2 M3.4 10 L10 3.4" stroke="white" stroke-opacity="0.6" stroke-width="1"/></g>`,
+  8,
+  8,
+  "0.55em 0.55em"
+);
+
+// Laurel: leaves on a stem, engraved into the metal.
+const LAUREL = tile(
+  `<g fill="oklch(0.42 0.09 70)" fill-opacity="0.75"><path d="M5 0 V16" stroke="oklch(0.42 0.09 70)" stroke-opacity="0.6" stroke-width="0.6"/><ellipse cx="3" cy="4" rx="1.4" ry="3.4" transform="rotate(-35 3 4)"/><ellipse cx="7" cy="4" rx="1.4" ry="3.4" transform="rotate(35 7 4)"/><ellipse cx="3" cy="12" rx="1.4" ry="3.4" transform="rotate(-35 3 12)"/><ellipse cx="7" cy="12" rx="1.4" ry="3.4" transform="rotate(35 7 12)"/></g><g fill="white" fill-opacity="0.45"><ellipse cx="2.6" cy="3.6" rx="0.5" ry="2.2" transform="rotate(-35 2.6 3.6)"/><ellipse cx="2.6" cy="11.6" rx="0.5" ry="2.2" transform="rotate(-35 2.6 11.6)"/></g>`,
+  10,
+  16,
+  "0.75em 1.2em"
+);
 
 export const FRAMES: Record<FrameId, FrameDef> = {
   gold: {
@@ -608,7 +723,146 @@ export const FRAMES: Record<FrameId, FrameDef> = {
     background: () =>
       "radial-gradient(ellipse at 30% 20%, oklch(0.99 0.01 85), oklch(0.9 0.02 80) 70%), linear-gradient(oklch(0.95 0.015 85), oklch(0.85 0.02 75))",
   },
+
+  // ── Ornate frames ──
+  engraved: {
+    nameCs: "Rytá zlatá",
+    thickness: 0.05,
+    background: () => GOLD_METAL,
+    texture: () => GUILLOCHE("oklch(0.42 0.09 60 / 0.75)"),
+    inner: { gap: 0, line: 0.007, background: () => "linear-gradient(135deg, oklch(0.4 0.08 60), oklch(0.3 0.06 55))" },
+    crest: { kind: "ball" },
+  },
+  filigree: {
+    nameCs: "Filigrán",
+    thickness: 0.055,
+    background: () => GOLD_METAL,
+    texture: () => FILIGREE("oklch(0.38 0.08 55 / 0.85)"),
+    inner: { gap: 0.006, line: 0.006, background: GOLD_LINE },
+    studs: { kind: "gem", at: [0.5], color: (p) => p.accent2 },
+    crest: { kind: "gem", color: (p) => p.accent2 },
+  },
+  jewel: {
+    nameCs: "Klenot",
+    thickness: 0.055,
+    background: () =>
+      "linear-gradient(135deg, oklch(0.92 0.05 40), oklch(0.68 0.09 25) 32%, oklch(0.93 0.04 45) 55%, oklch(0.6 0.09 20) 78%, oklch(0.85 0.06 35))",
+    texture: () => GUILLOCHE("oklch(0.42 0.08 25 / 0.6)"),
+    inner: { gap: 0.006, line: 0.006, background: GOLD_LINE },
+    studs: { kind: "gem", at: [0.22, 0.5, 0.78], color: (p) => p.accent2 },
+  },
+  hammered: {
+    nameCs: "Kované stříbro",
+    thickness: 0.05,
+    background: () => SILVER_METAL,
+    texture: () => HAMMERED,
+    inner: { gap: 0, line: 0.007, background: () => "linear-gradient(135deg, oklch(0.35 0.01 250), oklch(0.2 0.01 250))" },
+    studs: { kind: "rivet", at: [0.2, 0.5, 0.8] },
+  },
+  carbon: {
+    nameCs: "Karbon",
+    thickness: 0.05,
+    background: () => "#101010",
+    texture: () => `linear-gradient(135deg, oklch(1 0 0 / 0.22), transparent 30%, transparent 60%, oklch(1 0 0 / 0.1)), ${CARBON}`,
+    inner: { gap: 0, line: 0.008, background: (p) => p.accent2 },
+  },
+  marble: {
+    nameCs: "Mramor",
+    thickness: 0.05,
+    background: () => "linear-gradient(160deg, oklch(0.98 0.005 90), oklch(0.88 0.01 80))",
+    texture: () =>
+      stretched(
+        noise("fv", { freq: "0.012 0.022", seed: 21, gain: -7, bias: 1.05, color: "oklch(0.45 0.02 260)", opacity: 0.6, type: "turbulence", octaves: 4 }) +
+          noise("fw", { freq: "0.03 0.05", seed: 9, gain: -9, bias: 1.1, color: "oklch(0.7 0.1 80)", opacity: 0.5, type: "turbulence", octaves: 3 })
+      ),
+    inner: { gap: 0, line: 0.008, background: GOLD_LINE },
+  },
+  holo: {
+    nameCs: "Holo fólie",
+    thickness: 0.045,
+    background: () => "oklch(0.9 0.05 250)",
+    texture: () => `linear-gradient(135deg, oklch(1 0 0 / 0.45), transparent 35%, transparent 65%, oklch(1 0 0 / 0.3)), ${HOLO_FOIL}`,
+    inner: { gap: 0, line: 0.006, background: () => SILVER_METAL },
+  },
+  magma: {
+    nameCs: "Žhavá láva",
+    thickness: 0.05,
+    background: () => "linear-gradient(160deg, oklch(0.22 0.02 30), oklch(0.12 0.01 30))",
+    texture: () =>
+      stretched(
+        noise("mg", { freq: "0.02 0.03", seed: 13, gain: -8, bias: 1.15, color: "oklch(0.75 0.19 50)", type: "turbulence", octaves: 3 }) +
+          noise("mh", { freq: "0.02 0.03", seed: 13, gain: -14, bias: 1.1, color: "oklch(0.95 0.12 90)", type: "turbulence", octaves: 3 })
+      ),
+    inner: { gap: 0, line: 0.006, background: () => "oklch(0.7 0.2 45)" },
+    glow: () => "oklch(0.7 0.2 45)",
+  },
+  pearl: {
+    nameCs: "Perleť",
+    thickness: 0.045,
+    background: () => "linear-gradient(135deg, oklch(0.99 0.01 300), oklch(0.9 0.03 290) 50%, oklch(0.97 0.02 220))",
+    texture: () => `linear-gradient(135deg, oklch(1 0 0 / 0.5), transparent 40%), ${holoFoil(0.45, 3)}`,
+    inner: { gap: 0, line: 0.005, background: () => "linear-gradient(135deg, oklch(0.85 0.06 320), oklch(0.8 0.06 230))" },
+    glow: () => "oklch(0.8 0.12 310)",
+    crest: { kind: "gem", color: () => "oklch(0.92 0.04 300)" },
+  },
+  chipped: {
+    nameCs: "Oprýskaný",
+    thickness: 0.05,
+    background: (p) => `linear-gradient(135deg, ${p.accent}, color-mix(in oklch, ${p.accent} 60%, black))`,
+    // Paint flaking off bare metal: a dark rim, then the silver showing through, then rust specks.
+    texture: () =>
+      stretched(
+        noise("c1", { freq: "0.035", seed: 17, gain: 12, bias: -6.5, color: "oklch(0.2 0.02 40)", opacity: 0.8 }) +
+          noise("c2", { freq: "0.035", seed: 17, gain: 12, bias: -6.9, color: "oklch(0.88 0.01 250)" }) +
+          noise("c3", { freq: "0.12", seed: 4, gain: 14, bias: -9.3, color: "oklch(0.35 0.08 45)", opacity: 0.9 })
+      ),
+    inner: { gap: 0, line: 0.006, background: () => "oklch(0.2 0.01 40)" },
+  },
+  pillars: {
+    nameCs: "Sloupky",
+    thickness: 0.012,
+    background: () => GOLD_METAL,
+    inner: { gap: 0.016, line: 0.008, background: GOLD_LINE },
+    sideBars: () => GOLD_METAL,
+  },
+  diamond: {
+    nameCs: "Diamantový brus",
+    thickness: 0.05,
+    background: () => "linear-gradient(135deg, oklch(0.97 0.02 220), oklch(0.75 0.06 230) 50%, oklch(0.95 0.03 210))",
+    texture: () => FACETS,
+    inner: { gap: 0, line: 0.006, background: () => SILVER_METAL },
+    crest: { kind: "gem", color: () => "oklch(0.9 0.06 220)" },
+  },
+  scales: {
+    nameCs: "Dračí šupiny",
+    thickness: 0.05,
+    background: (p) => p.accent,
+    texture: (p) => SCALES(p.accent2),
+    inner: { gap: 0, line: 0.007, background: GOLD_LINE },
+    studs: { kind: "gem", at: [0.5], color: (p) => p.accent },
+  },
+  rope: {
+    nameCs: "Kroucené zlato",
+    thickness: 0.04,
+    background: () => GOLD_METAL,
+    texture: () => ROPE,
+    inner: { gap: 0.008, line: 0.005, background: GOLD_LINE },
+  },
+  laurel: {
+    nameCs: "Vavříny",
+    thickness: 0.055,
+    background: () => GOLD_METAL,
+    texture: () => LAUREL,
+    inner: { gap: 0, line: 0.006, background: () => "linear-gradient(135deg, oklch(0.4 0.08 60), oklch(0.3 0.06 55))" },
+    crest: { kind: "star" },
+  },
 };
+
+/** The frame's full CSS background: drawn texture over the base metal/colour. */
+export function frameBackground(frame: FrameId, p: Palette): string {
+  const def = FRAMES[frame];
+  return [def.texture?.(p), def.background(p)].filter(Boolean).join(", ");
+}
 
 // ─── Backgrounds (`pattern`) ──────────────────────────────────────────────────
 
@@ -967,11 +1221,12 @@ export const LAYOUTS: Record<LayoutId, { nameCs: string; descriptionCs: string; 
 
 // ─── Sets (presets) ───────────────────────────────────────────────────────────
 
-export type PresetTag = "zaklad" | "edice" | "specialy" | "chrome" | "legendy";
+export type PresetTag = "zaklad" | "edice" | "ozdobne" | "specialy" | "chrome" | "legendy";
 
 export const PRESET_TAGS: { id: PresetTag; nameCs: string }[] = [
   { id: "zaklad", nameCs: "Základ" },
   { id: "edice", nameCs: "Herní edice" },
+  { id: "ozdobne", nameCs: "Ozdobné rámy" },
   { id: "specialy", nameCs: "Speciály" },
   { id: "chrome", nameCs: "Chrome" },
   { id: "legendy", nameCs: "Legendy" },
@@ -1030,6 +1285,23 @@ export const PRESETS: Preset[] = [
   { id: "frost-minimal", nameCs: "Mráz", descriptionCs: "Čistá světlá karta", tags: ["zaklad"], requiredTier: "free", design: d("bevel", "ice", "minimal", "frost", "mesh", "gloss") },
   { id: "window-icon", nameCs: "Album", descriptionCs: "Moderní kartička do alba", tags: ["zaklad"], requiredTier: "free", design: d("classic", "line", "sticker", "icon", "clean", "none") },
 
+  // Ozdobné rámy — drawn frame surfaces, gems and rivets
+  { id: "orn-engraved", nameCs: "Rytina", descriptionCs: "Zlatý rám s gravírováním", tags: ["ozdobne", "zaklad"], requiredTier: "free", design: d("fut", "engraved", "fc", "blackgold", "streaks", "gloss") },
+  { id: "orn-hammered", nameCs: "Kovaná", descriptionCs: "Tepané stříbro s nýty", tags: ["ozdobne", "zaklad"], requiredTier: "free", design: d("bevel", "hammered", "pro", "platinum", "facets", "gloss") },
+  { id: "orn-carbon", nameCs: "Karbon", descriptionCs: "Uhlíková vlákna a neonová linka", tags: ["ozdobne"], requiredTier: "premium", design: d("shard", "carbon", "pro", "electric", "facets", "refractor") },
+  { id: "orn-royal", nameCs: "Královská", descriptionCs: "Zlatý filigrán s drahokamem", tags: ["ozdobne", "legendy"], requiredTier: "premium", design: dx(d("crown", "filigree", "fc", "royal", "beams", "goldglint"), { aura: "glow" }) },
+  { id: "orn-jewel", nameCs: "Klenot", descriptionCs: "Rose gold posázený kameny", tags: ["ozdobne"], requiredTier: "premium", design: d("elite", "jewel", "fc", "amethyst", "crystal", "shimmer") },
+  { id: "orn-marble", nameCs: "Mramorová", descriptionCs: "Mramorový rám se zlatou linkou", tags: ["ozdobne", "legendy"], requiredTier: "premium", design: dx(d("classic", "marble", "classic", "icon", "marble", "goldglint"), { nameStyle: "signature" }) },
+  { id: "orn-holo", nameCs: "Hologram", descriptionCs: "Duhová holografická fólie", tags: ["ozdobne", "chrome"], requiredTier: "premium", design: d("bevel", "holo", "fc", "platinum", "mesh", "prizm") },
+  { id: "orn-laurel", nameCs: "Vítěz", descriptionCs: "Zlaté vavříny a hvězda", tags: ["ozdobne", "zaklad"], requiredTier: "free", design: d("fut", "laurel", "fc", "gold", "beams", "goldglint") },
+  { id: "orn-pillars", nameCs: "Zlaté sloupky", descriptionCs: "Dvojitá linka se sloupky po stranách", tags: ["ozdobne"], requiredTier: "premium", design: d("crown", "pillars", "fc", "blackgold", "streaks", "shimmer") },
+  { id: "orn-pearl", nameCs: "Perleťová", descriptionCs: "Perleťový rám s duhovou září", tags: ["ozdobne", "legendy"], requiredTier: "premium", design: dx(d("crown", "pearl", "fc", "icon", "mesh", "refractor"), { aura: "glow" }) },
+  { id: "orn-chipped", nameCs: "Oprýskaná", descriptionCs: "Barva odlupující se z kovu", tags: ["ozdobne"], requiredTier: "premium", design: d("bevel", "chipped", "fc", "copper", "grunge", "none") },
+  { id: "orn-diamond", nameCs: "Diamant", descriptionCs: "Broušený rám jako drahokam", tags: ["ozdobne"], requiredTier: "premium", design: d("bevel", "diamond", "pro", "frost", "crystal", "refractor") },
+  { id: "orn-dragon", nameCs: "Drak", descriptionCs: "Rám z dračích šupin", tags: ["ozdobne"], requiredTier: "premium", design: dx(d("shard", "scales", "pro", "emerald", "smoke", "shimmer"), { aura: "smoke" }) },
+  { id: "orn-rope", nameCs: "Kroucená", descriptionCs: "Kroucené zlato na modré", tags: ["ozdobne"], requiredTier: "premium", design: d("classic", "rope", "classic", "royal", "beams", "gloss") },
+  { id: "orn-magma",nameCs: "Magma", descriptionCs: "Rám z žhnoucí lávy", tags: ["ozdobne"], requiredTier: "premium", design: dx(d("elite", "magma", "pro", "inferno", "smoke", "shimmer"), { aura: "fire" }) },
+
   // Speciály — promo-style cards
   { id: "icon", nameCs: "Ikona", descriptionCs: "Bílozlatá karta legend", tags: ["specialy", "legendy"], requiredTier: "premium", design: d("elite", "gold", "pro", "icon", "beams", "goldglint") },
   { id: "toty", nameCs: "Rok hvězd", descriptionCs: "Tmavě modrá se zlatem", tags: ["specialy"], requiredTier: "premium", design: d("elite", "gold", "pro", "royal", "beams", "goldglint") },
@@ -1080,7 +1352,8 @@ const OLD_SHAPES: Record<string, ShapeId> = {
   octagon: "bevel",
   notch: "shard",
 };
-const OLD_FRAMES: Record<string, FrameId> = { holo: "chrome", carbon: "black", marble: "silver", fire: "rosegold", emerald: "chrome", thin: "line" };
+// (holo / carbon / marble used to map to chrome / black / silver; they are real frames again.)
+const OLD_FRAMES: Record<string, FrameId> = { fire: "rosegold", emerald: "chrome", thin: "line" };
 const OLD_PATTERNS: Record<string, PatternId> = { none: "clean", rays: "beams", hex: "facets" };
 const OLD_FINISHES: Record<string, FinishId> = { foil: "goldglint", holo: "refractor", glitter: "speckle", prism: "prizm" };
 const OLD_PALETTES: Record<string, string> = {

@@ -17,6 +17,7 @@ import {
   Loader2,
   Printer,
   Gift,
+  CopyPlus,
 } from "lucide-react";
 import { CardReveal } from "@/components/card/CardReveal";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
   getCardDoc,
   updateCard,
   deleteCard,
+  duplicateCard,
   getPlayerDoc,
 } from "@/lib/firebaseServices";
 import { CARD_TYPE_LABELS } from "@/lib/cardEngine";
@@ -65,7 +67,7 @@ function DownloadCardButton({ card, captureNode }: { card: Card; captureNode: ()
 
 export default function CardDetailPage() {
   const { user } = useAuthStore();
-  const { cards, updateCard: updateStore, removeCard } = useCardsStore();
+  const { cards, updateCard: updateStore, removeCard, addCard } = useCardsStore();
   const { players } = usePlayersStore();
   const router = useRouter();
   const params = useParams();
@@ -82,6 +84,7 @@ export default function CardDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [revealOpen, setRevealOpen] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,6 +125,27 @@ export default function CardDetailPage() {
     } catch (err) {
       console.warn("[CardDetail] delete", err);
       toast.error("Kartičku se nepodařilo smazat.");
+    }
+  };
+
+  // Independent copy; opens it in the editor so the user can change it right away.
+  const handleDuplicate = async () => {
+    if (!card || duplicating) return;
+    setDuplicating(true);
+    try {
+      const copy = await duplicateCard(card.id);
+      addCard(copy);
+      toast.success("Kopie vytvořena. Původní kartička zůstala beze změn.");
+      router.push(`/${locale}/cards/${copy.id}/edit`);
+    } catch (err) {
+      if ((err as { code?: string }).code === "functions/resource-exhausted") {
+        toast.error("Tento měsíc už nemůžete vytvořit další kartičku.");
+      } else {
+        console.warn("[CardDetail] duplicate", err);
+        toast.error("Kopii se nepodařilo vytvořit.");
+      }
+    } finally {
+      setDuplicating(false);
     }
   };
 
@@ -210,11 +234,21 @@ export default function CardDetailPage() {
               <Sparkles className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href={`/${locale}/cards/${card.id}/edit`}>
+          <Link href={`/${locale}/cards/${card.id}/edit`} title="Upravit">
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <Pencil className="h-4 w-4" />
             </Button>
           </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleDuplicate}
+            disabled={duplicating}
+            title="Duplikovat — vytvoří samostatnou kopii kartičky"
+          >
+            {duplicating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CopyPlus className="h-4 w-4" />}
+          </Button>
           <Button
             variant="ghost"
             size="icon"

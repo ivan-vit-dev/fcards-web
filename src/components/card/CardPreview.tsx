@@ -9,11 +9,14 @@ import {
   PATTERNS,
   PHOTO_FILTERS,
   SHAPES,
+  frameBackground,
+  shapeEdgeAt,
   resolveBadges,
   resolveDesign,
   resolvePalette,
   shapeClipPath,
   type AuraId,
+  type FrameDef,
   type NameStyleId,
   type Palette,
   type PhotoFilterId,
@@ -223,7 +226,19 @@ export function CardPreview({
       {aura && <Aura kind={aura} p={p} />}
 
       {/* Frame */}
-      <div className="absolute inset-0" style={{ background: frame.background(p), clipPath, borderRadius: radius }} />
+      <div className="absolute inset-0" style={{ background: frameBackground(design.frame, p), clipPath, borderRadius: radius }} />
+      {/* Metal sheen across the frame; follows the pointer on interactive cards */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          clipPath,
+          borderRadius: radius,
+          backgroundImage: "linear-gradient(115deg, transparent 38%, oklch(1 0 0 / 0.5) 48%, oklch(1 0 0 / 0.12) 52%, transparent 62%)",
+          backgroundSize: "250% 250%",
+          backgroundPosition: "var(--gx) var(--gy)",
+          mixBlendMode: "overlay",
+        }}
+      />
       {frame.inner && (
         <>
           <div
@@ -311,11 +326,141 @@ export function CardPreview({
           </div>
         )}
       </div>
+
+      {frame.studs && (
+        <FrameStuds studs={frame.studs} p={p} band={thickness} clipPath={clipPath} radius={radius} />
+      )}
+      {frame.crest && <FrameCrest crest={frame.crest} p={p} band={thickness} top={shapeEdgeAt(design.shape, 50).top} />}
+      {frame.sideBars && !flat && <SideBars background={frame.sideBars(p)} band={dims.w * 0.02} />}
     </div>
   );
 }
 
+// Metal bars standing out of both sides, like pilasters (screen and PNG only).
+function SideBars({ background, band }: { background: string; band: number }) {
+  const bars = [
+    { offset: band * 0.7, width: band * 0.8, top: 18, height: 64 },
+    { offset: band * 2, width: band * 0.5, top: 28, height: 44 },
+  ];
+  return (
+    <>
+      {bars.flatMap((b, i) =>
+        (["left", "right"] as const).map((side) => (
+          <div
+            key={`${side}-${i}`}
+            className="absolute pointer-events-none"
+            style={{
+              [side]: -(b.offset + b.width),
+              width: b.width,
+              top: `${b.top}%`,
+              height: `${b.height}%`,
+              background,
+              borderRadius: b.width / 2,
+              boxShadow: "0 0 0.3em oklch(0 0 0 / 0.4)",
+            }}
+          />
+        ))
+      )}
+    </>
+  );
+}
+
+// Emblem centred on the top edge — a star, a football or a gem in a gold setting.
+function FrameCrest({ crest, p, band, top }: { crest: NonNullable<FrameDef["crest"]>; p: Palette; band: number; top: number }) {
+  const size = Math.max(10, band * 2.4);
+  const color = crest.color?.(p) ?? p.accent2;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="absolute pointer-events-none"
+      style={{
+        width: size,
+        height: size,
+        left: `calc(50% - ${size / 2}px)`,
+        top: `calc(${(top / 140) * 100}% + ${band / 2 - size / 2}px)`,
+        filter: `drop-shadow(0 ${size * 0.06}px ${size * 0.1}px oklch(0 0 0 / 0.5))`,
+      }}
+    >
+      <defs>
+        <linearGradient id="crest-gold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="oklch(0.95 0.09 92)" />
+          <stop offset="0.5" stopColor="oklch(0.7 0.14 72)" />
+          <stop offset="1" stopColor="oklch(0.88 0.12 88)" />
+        </linearGradient>
+      </defs>
+      {crest.kind === "star" && (
+        <path
+          d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5 1.4-7.1-5.3-5 7.2-.9z"
+          fill="url(#crest-gold)"
+          stroke="oklch(0.4 0.08 60)"
+          strokeWidth="0.8"
+        />
+      )}
+      {crest.kind === "ball" && (
+        <>
+          <circle cx="12" cy="12" r="10.5" fill="url(#crest-gold)" stroke="oklch(0.4 0.08 60)" strokeWidth="0.8" />
+          <circle cx="12" cy="12" r="7.5" fill="oklch(0.97 0 0)" stroke="oklch(0.25 0 0)" strokeWidth="0.6" />
+          <path d="M12 8.6l3.2 2.3-1.2 3.8h-4l-1.2-3.8z" fill="oklch(0.2 0 0)" />
+          <path d="M12 8.6V4.6M15.2 10.9l3.6-1.2M14 14.7l2.3 3.1M10 14.7l-2.3 3.1M8.8 10.9L5.2 9.7" stroke="oklch(0.25 0 0)" strokeWidth="0.6" />
+        </>
+      )}
+      {crest.kind === "gem" && (
+        <>
+          <path d="M12 1l9 11-9 11-9-11z" fill="url(#crest-gold)" stroke="oklch(0.4 0.08 60)" strokeWidth="0.8" />
+          <path d="M12 4.5l6.2 7.5-6.2 7.5-6.2-7.5z" fill={color} />
+          <path d="M12 4.5l6.2 7.5H5.8z" fill="white" fillOpacity="0.4" />
+          <path d="M12 4.5l-2.5 7.5h5z" fill="white" fillOpacity="0.35" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 // ─── Building blocks ──────────────────────────────────────────────────────────
+
+// Gems / rivets centred on the left and right frame band; clipped to the shape so they never
+// stick out of torn or cut edges.
+function FrameStuds({
+  studs,
+  p,
+  band,
+  clipPath,
+  radius,
+}: {
+  studs: NonNullable<FrameDef["studs"]>;
+  p: Palette;
+  band: number;
+  clipPath?: string;
+  radius: number;
+}) {
+  const gem = studs.kind === "gem";
+  const size = band * (gem ? 1.7 : 0.6);
+  const color = studs.color?.(p) ?? p.accent2;
+  const style: CSSProperties = gem
+    ? {
+        borderRadius: "50%",
+        background: `radial-gradient(circle at 35% 30%, oklch(1 0 0 / 0.95) 0 8%, color-mix(in oklch, ${color} 70%, white) 22%, ${color} 50%, color-mix(in oklch, ${color} 55%, black) 85%)`,
+        boxShadow: `0 0 0 ${Math.max(1, size * 0.14)}px oklch(0.78 0.13 80), 0 0 0 ${Math.max(1.5, size * 0.2)}px oklch(0.45 0.08 60), 0 ${size * 0.1}px ${size * 0.3}px oklch(0 0 0 / 0.5)`,
+      }
+    : {
+        borderRadius: "50%",
+        background: "radial-gradient(circle at 35% 30%, oklch(0.98 0 0), oklch(0.7 0.01 250) 45%, oklch(0.35 0.01 250) 100%)",
+        boxShadow: `0 ${size * 0.12}px ${size * 0.25}px oklch(0 0 0 / 0.55)`,
+      };
+  return (
+    <div className="absolute inset-0 pointer-events-none" style={{ clipPath, borderRadius: radius }}>
+      {studs.at.flatMap((y) =>
+        (["left", "right"] as const).map((side) => (
+          <div
+            key={`${side}-${y}`}
+            className="absolute"
+            style={{ ...style, width: size, height: size, top: `calc(${y * 100}% - ${size / 2}px)`, [side]: band / 2 - size / 2 }}
+          />
+        ))
+      )}
+    </div>
+  );
+}
 
 function initials(name: string) {
   return name

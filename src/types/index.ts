@@ -317,7 +317,23 @@ export type FrameId =
   | "doublegold"
   | "doublesilver"
   | "neonline"
-  | "paper";
+  | "paper"
+  // Ornate frames: drawn surface texture (+ gems / rivets on the sides)
+  | "engraved"
+  | "filigree"
+  | "jewel"
+  | "hammered"
+  | "carbon"
+  | "marble"
+  | "holo"
+  | "magma"
+  | "pearl"
+  | "chipped"
+  | "pillars"
+  | "diamond"
+  | "scales"
+  | "rope"
+  | "laurel";
 export type LayoutId = "fc" | "classic" | "pro" | "sticker" | "fullbleed" | "sidebar" | "minimal";
 /** Face background. */
 export type PatternId =
