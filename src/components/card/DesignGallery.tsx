@@ -68,8 +68,8 @@ export function DesignGallery({
                 allowed ? "hover:border-primary/50" : "cursor-not-allowed"
               )}
             >
-              <div className="flex justify-center bg-muted/40 py-3">
-                <CardPreview card={card} player={player} design={preset.design} size="sm" />
+              <div className="flex justify-center bg-muted/40">
+                <CardPreview card={card} player={player} design={preset.design} size="sm" uniformSpace />
               </div>
               {selected && (
                 <span className="absolute top-2 right-2 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">

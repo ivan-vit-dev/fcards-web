@@ -62,6 +62,8 @@ export function CardSelectionGrid({ cards, players, selected, maxSelectable, onT
                 card={card}
                 player={players.find((p) => p.id === card.playerId)}
                 size="sm"
+                uniformSpace
+                className="self-center"
               />
 
               <div className="px-0.5 pb-0.5">

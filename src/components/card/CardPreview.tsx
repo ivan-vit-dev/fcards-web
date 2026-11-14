@@ -82,6 +82,9 @@ interface CardPreviewProps {
   flat?: boolean;
   /** Tilts toward the pointer with a moving glare, like a real foil card in your hand. */
   interactive?: boolean;
+  /** Reserve the overlay's room even when this card has no overlay — for grids, so cards with
+   *  and without overlays line up in equal rows. */
+  uniformSpace?: boolean;
   className?: string;
   onClick?: () => void;
 }
@@ -119,6 +122,7 @@ export function CardPreview({
   size = "md",
   flat,
   interactive,
+  uniformSpace,
   className,
   onClick,
 }: CardPreviewProps) {
@@ -225,7 +229,7 @@ export function CardPreview({
         fontSize: dims.font,
         // Room for the overlay that spills past the outline, so parents (scroll areas, the PNG
         // export wrapper) don't cut it off. Not in print (flat): there it is clipped to the card.
-        margin: overlayUrl && !flat ? (dims.w * OVERLAY_MARGIN) / 100 : undefined,
+        margin: (overlayUrl || uniformSpace) && !flat ? (dims.w * OVERLAY_MARGIN) / 100 : undefined,
         transform: interactive ? "perspective(900px) rotateY(var(--rx)) rotateX(var(--ry))" : undefined,
         touchAction: interactive ? "pan-y" : undefined,
         filter: flat

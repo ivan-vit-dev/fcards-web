@@ -47,7 +47,7 @@ export function SeasonAlbum({ cards }: Props) {
               </span>
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-1 gap-y-0">
               {seasonCards.map((card) => (
                 <Link key={card.id} href={`/${locale}/cards/${card.id}`}>
                   <div className="group space-y-1">
@@ -56,6 +56,7 @@ export function SeasonAlbum({ cards }: Props) {
                         card={card}
                         player={players.find((p) => p.id === card.playerId)}
                         size="sm"
+                        uniformSpace
                         className="transition-transform duration-200 group-hover:scale-[1.04]"
                       />
                     </div>

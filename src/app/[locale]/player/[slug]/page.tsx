@@ -203,8 +203,8 @@ export default function PublicPlayerPage() {
                       href={`/${locale}/card/${card.shareSlug}`}
                       className="group relative"
                     >
-                      <div className="rounded-xl overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]">
-                        <CardPreview card={card} player={player} size="sm" />
+                      <div className="flex justify-center transition-transform duration-200 group-hover:scale-[1.02]">
+                        <CardPreview card={card} player={player} size="sm" uniformSpace />
                       </div>
                       <div className="mt-1.5 flex items-center justify-between px-0.5">
                         <RarityBadge rarity={card.rarity} />

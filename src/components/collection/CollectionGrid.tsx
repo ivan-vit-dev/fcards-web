@@ -37,9 +37,9 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-2 gap-y-1">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="w-[210px] h-[294px] mx-auto rounded-xl" />
+          <Skeleton key={i} className="w-[210px] h-[294px] m-[25px] mx-auto rounded-xl" />
         ))}
       </div>
     );
@@ -47,7 +47,7 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
 
   return (
     <>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-2 gap-y-1">
         {cards.map((card) => (
           <Link key={card.id} href={`/${locale}/cards/${card.id}`}>
             <div className="group space-y-2">
@@ -56,6 +56,7 @@ export function CollectionGrid({ cards, hasMore, onLoadMore, loading }: Props) {
                   card={card}
                   player={players.find((p) => p.id === card.playerId)}
                   size="md"
+                  uniformSpace
                   className="transition-transform duration-200 group-hover:scale-[1.03]"
                 />
               </div>
