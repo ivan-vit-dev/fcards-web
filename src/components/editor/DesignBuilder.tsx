@@ -12,6 +12,9 @@ import {
   NAME_STYLES,
   OVERLAYS,
   OVERLAY_MARGIN,
+  OVERLAY_TONES,
+  overlayColors,
+  type OverlayToneId,
   PALETTES,
   PATTERNS,
   PHOTO_FILTERS,
@@ -239,14 +242,15 @@ export function DesignBuilder({ card, player, design, locked, locale, onChange }
       >
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
           {(Object.keys(OVERLAYS) as OverlayId[]).map((id) => {
-            const img = overlayImage(id, palette, design.shape);
+            const img = overlayImage(id, palette, design.shape, design.overlayTone);
             return (
               <Option
                 key={id}
                 active={(design.overlay ?? "none") === id}
                 label={OVERLAYS[id].nameCs}
                 title={OVERLAYS[id].descriptionCs}
-                onClick={() => onChange({ overlay: id })}
+                // A new overlay starts in its own colours; the tone row below can change them.
+                onClick={() => onChange({ overlay: id, overlayTone: undefined })}
               >
                 <div className="relative my-1.5 h-[56px] w-10">
                   <div
@@ -271,6 +275,36 @@ export function DesignBuilder({ card, player, design, locked, locale, onChange }
             );
           })}
         </div>
+        {design.overlay && design.overlay !== "none" && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-xs text-muted-foreground">Barvy ozdoby</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(OVERLAY_TONES) as OverlayToneId[]).map((tone) => {
+                const [a, b, c] = overlayColors(tone, palette);
+                const active = (design.overlayTone ?? OVERLAYS[design.overlay!].tone) === tone;
+                return (
+                  <button
+                    key={tone}
+                    type="button"
+                    onClick={() => onChange({ overlayTone: tone })}
+                    aria-pressed={active}
+                    title={OVERLAY_TONES[tone].nameCs}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full border-2 py-1 pl-1 pr-2.5 text-[11px] transition-colors",
+                      active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <span
+                      className="h-4 w-4 rounded-full border border-border"
+                      style={{ background: `conic-gradient(${a} 0 50%, ${b} 50% 75%, ${c} 75%)` }}
+                    />
+                    {OVERLAY_TONES[tone].nameCs}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section title="Povrch" hint="Na obrazovce se odlesk hýbe, když kartičkou pohnete myší nebo prstem.">

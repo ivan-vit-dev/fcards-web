@@ -16,13 +16,14 @@ import type {
   LayoutId,
   NameStyleId,
   OverlayId,
+  OverlayToneId,
   PatternId,
   PhotoFilterId,
   ShapeId,
   SubscriptionTier,
 } from "@/types";
 
-export type { AuraId, CardDesign, FinishId, FrameId, LayoutId, NameStyleId, OverlayId, PatternId, PhotoFilterId, ShapeId };
+export type { AuraId, CardDesign, FinishId, FrameId, LayoutId, NameStyleId, OverlayId, OverlayToneId, PatternId, PhotoFilterId, ShapeId };
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
 
@@ -1147,26 +1148,65 @@ export const NAME_STYLES: Record<NameStyleId, { nameCs: string }> = {
 };
 
 // ─── Overlays (decoration over the frame) ─────────────────────────────────────
-// Smoke, splatter, shards, sparks… laid ON TOP of the frame and spilling past the card's
-// outline, the way promo cards break their own silhouette. Drawn procedurally along the shape's
-// perimeter (so they hug any shape) as one SVG in a box 12 units larger than the card on every
-// side: viewBox −12 −12 124 164 over the 100 × 140 card. A data URI, so ids never clash
-// between cards on the same page.
+// Smoke, peeling paint, flames, crystals… laid ON TOP of the frame and spilling past the card's
+// outline, the way promo cards break their own silhouette. One SVG per card in a box 12 units
+// larger than the card on every side (viewBox −12 −12 124 164 over the 100 × 140 card), as a
+// data URI so filter ids never clash between cards on a page.
+//
+// Organic overlays (smoke, fire, paint, frost, rubble) are noise confined to a soft band along
+// the outline: the outline is stroked white (inner part masked black), blurred into a band,
+// multiplied with turbulence and thresholded — so the effect hugs any shape and fades outward.
+// The rest (crystals, confetti, stars…) are procedural shapes placed along the perimeter.
+//
+// Colours come from a tone: "auto" follows the card palette, the others are fixed combinations.
 
 export const OVERLAY_MARGIN = 12;
 
-export const OVERLAYS: Record<OverlayId, { nameCs: string; descriptionCs: string }> = {
-  none: { nameCs: "Žádné", descriptionCs: "Čistý okraj" },
-  smoke: { nameCs: "Kouř", descriptionCs: "Barevný kouř obtékající rám" },
-  splatter: { nameCs: "Stříkance", descriptionCs: "Kapky barvy a odlétající šupinky" },
-  shards: { nameCs: "Úlomky", descriptionCs: "Kovové střepy trčící z okraje" },
-  sparks: { nameCs: "Jiskry", descriptionCs: "Žhavé jiskry odletující od rámu" },
-  flames: { nameCs: "Plameny", descriptionCs: "Jazyky ohně šlehající přes okraj" },
-  frost: { nameCs: "Námraza", descriptionCs: "Ledové krystalky na rámu" },
-  lightning: { nameCs: "Blesky", descriptionCs: "Elektrické výboje kolem karty" },
-  glitter: { nameCs: "Třpytky", descriptionCs: "Zlatý prach a hvězdičky" },
-  ink: { nameCs: "Tahy štětcem", descriptionCs: "Hrubé tahy barvy přes rám" },
+export const OVERLAYS: Record<OverlayId, { nameCs: string; descriptionCs: string; tone: OverlayToneId }> = {
+  none: { nameCs: "Žádné", descriptionCs: "Čistý okraj", tone: "auto" },
+  smoke: { nameCs: "Kouř", descriptionCs: "Hustý barevný kouř obtékající kartičku", tone: "auto" },
+  flames: { nameCs: "Plameny", descriptionCs: "Oheň šlehající z okrajů", tone: "fire" },
+  splatter: { nameCs: "Oprýskaná barva", descriptionCs: "Odlupující se barva a stříkance", tone: "white" },
+  rubble: { nameCs: "Kamenná suť", descriptionCs: "Rozbitý kámen a odlétající úlomky", tone: "stone" },
+  frost: { nameCs: "Námraza", descriptionCs: "Ledové žilky a krystalky", tone: "ice" },
+  shards: { nameCs: "Krystaly", descriptionCs: "Zářící krystaly vyrůstající z rámu", tone: "auto" },
+  neon: { nameCs: "Neonové obrysy", descriptionCs: "Zářící linky kolem kartičky", tone: "auto" },
+  lightning: { nameCs: "Blesky", descriptionCs: "Elektrické výboje a záře", tone: "electric" },
+  sparks: { nameCs: "Žhavé jiskry", descriptionCs: "Uhlíky a jiskry odlétající od rámu", tone: "fire" },
+  glitter: { nameCs: "Hvězdný prach", descriptionCs: "Třpytivý prach a záblesky", tone: "gold" },
+  goldleaf: { nameCs: "Zlaté plátky", descriptionCs: "Plátky kovové fólie", tone: "gold" },
+  stars: { nameCs: "Hvězdičky", descriptionCs: "Zářící hvězdičky kolem kartičky", tone: "gold" },
+  confetti: { nameCs: "Konfety", descriptionCs: "Oslava! Konfety a serpentiny", tone: "auto" },
+  ink: { nameCs: "Tahy štětcem", descriptionCs: "Hrubé tahy barvy přes rám", tone: "auto" },
 };
+
+/** Colour combination of an overlay: main, deep (shadow side) and light (highlights). */
+export interface OverlayTone {
+  nameCs: string;
+  colors?: [string, string, string];
+}
+
+export const OVERLAY_TONES: Record<OverlayToneId, OverlayTone> = {
+  auto: { nameCs: "Podle karty" },
+  gold: { nameCs: "Zlatá", colors: ["oklch(0.84 0.15 85)", "oklch(0.58 0.13 65)", "oklch(0.97 0.07 95)"] },
+  silver: { nameCs: "Stříbrná", colors: ["oklch(0.86 0.01 250)", "oklch(0.52 0.015 250)", "oklch(0.99 0 0)"] },
+  white: { nameCs: "Bílá", colors: ["oklch(0.95 0.005 250)", "oklch(0.6 0.01 250)", "oklch(1 0 0)"] },
+  fire: { nameCs: "Oheň", colors: ["oklch(0.72 0.2 50)", "oklch(0.55 0.22 28)", "oklch(0.95 0.12 95)"] },
+  ice: { nameCs: "Led", colors: ["oklch(0.86 0.09 220)", "oklch(0.6 0.13 245)", "oklch(0.99 0.02 210)"] },
+  purple: { nameCs: "Fialová", colors: ["oklch(0.66 0.22 305)", "oklch(0.45 0.2 290)", "oklch(0.88 0.1 320)"] },
+  pink: { nameCs: "Růžová", colors: ["oklch(0.75 0.17 350)", "oklch(0.55 0.2 0)", "oklch(0.93 0.07 340)"] },
+  ruby: { nameCs: "Rubínová", colors: ["oklch(0.6 0.22 22)", "oklch(0.4 0.16 18)", "oklch(0.85 0.1 25)"] },
+  toxic: { nameCs: "Jedovatá", colors: ["oklch(0.86 0.22 135)", "oklch(0.58 0.18 150)", "oklch(0.96 0.14 120)"] },
+  electric: { nameCs: "Elektrická", colors: ["oklch(0.8 0.14 220)", "oklch(0.55 0.2 265)", "oklch(0.98 0.04 220)"] },
+  ocean: { nameCs: "Tyrkysová", colors: ["oklch(0.78 0.13 190)", "oklch(0.52 0.11 215)", "oklch(0.95 0.06 185)"] },
+  stone: { nameCs: "Kámen", colors: ["oklch(0.72 0.03 70)", "oklch(0.42 0.03 60)", "oklch(0.9 0.02 80)"] },
+  shadow: { nameCs: "Temná", colors: ["oklch(0.32 0.02 285)", "oklch(0.14 0.01 285)", "oklch(0.55 0.04 285)"] },
+};
+
+/** The overlay's colours: a fixed tone, or the card palette for "auto". */
+export function overlayColors(tone: OverlayToneId | undefined, p: Palette): [string, string, string] {
+  return OVERLAY_TONES[tone ?? "auto"]?.colors ?? [p.accent2, p.accent, "oklch(0.98 0.02 90)"];
+}
 
 type EdgePoint = { x: number; y: number; nx: number; ny: number; tx: number; ty: number };
 
@@ -1183,6 +1223,15 @@ function outlinePoints(shape: ShapeId): Pt[] {
     }
   }
   return pts;
+}
+
+/** Outline grown (d > 0) or shrunk (d < 0) by about d units, as SVG points. */
+function outlineAt(shape: ShapeId, d: number): string {
+  const sx = (50 + d) / 50;
+  const sy = (70 + d) / 70;
+  return outlinePoints(shape)
+    .map(([x, y]) => `${f1(50 + (x - 50) * sx)},${f1(70 + (y - 70) * sy)}`)
+    .join(" ");
 }
 
 /** Point on the outline at t (0–1 of the perimeter) with outward normal and tangent. */
@@ -1206,241 +1255,392 @@ function perimeter(shape: ShapeId): (t: number) => EdgePoint {
     const y = s.ay + s.dy * k;
     const tx = s.dx / s.len;
     const ty = s.dy / s.len;
-    let nx = ty;
-    let ny = -tx;
-    if (nx * (x - 50) + ny * (y - 70) < 0) {
-      nx = -nx;
-      ny = -ny;
-    }
+    // Normal from the centre outwards — robust for the notches of crown / torn shapes.
+    let nx = x - 50;
+    let ny = (y - 70) * (50 / 70);
+    const n = Math.hypot(nx, ny) || 1;
+    nx /= n;
+    ny /= n;
     return { x, y, nx, ny, tx, ty };
   };
 }
 
-const f1 = (n: number) => +n.toFixed(2);
+function f1(n: number) {
+  return +n.toFixed(2);
+}
 
-const GLOW = `<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+const BOX = `x="-12" y="-12" width="124" height="164"`;
 
-function overlayBody(id: OverlayId, p: Palette, shape: ShapeId): string {
+const GLOW = (id: string, blur: number) =>
+  `<filter id="${id}" filterUnits="userSpaceOnUse" ${BOX}><feGaussianBlur stdDeviation="${blur}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+
+interface BandOpts {
+  out: number; // how far the band's centre line sits outside the outline
+  width: number; // band width
+  inner?: number; // the band is cut off this far inside the outline (default 2)
+  blur: number; // band softness
+  freq: string;
+  octaves?: number;
+  seed: number;
+  noise?: "fractalNoise" | "turbulence";
+  invert?: boolean; // turbulence veins: use 1 − noise
+  slope: number; // threshold of noise × band: alpha = slope·v + intercept
+  intercept: number;
+  color: string;
+  opacity?: number;
+  displace?: number; // wobble the result (wisps, flame tongues)
+  relief?: boolean; // lit 3D surface (paint chips, stone)
+  shadow?: boolean; // drop shadow under the shapes
+  /** Patches along the outline: heavy in places, clear in others (frequency; 0 = even ring).
+   *  Layers of one overlay share `patchSeed` so their patches line up. */
+  patch?: number;
+  patchSeed?: number;
+  rise?: number; // shift the result upwards (flames)
+  soften?: number; // blur the finished layer (smoke)
+}
+
+/** Noise confined to a soft band along the outline (see the section comment). */
+function band(shape: ShapeId, id: string, o: BandOpts): string {
+  const n = o.invert
+    ? "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1.4 0 0 0 1"
+    : "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0";
+  let f =
+    `<filter id="${id}" filterUnits="userSpaceOnUse" ${BOX} color-interpolation-filters="sRGB">` +
+    `<feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="l"/>` +
+    `<feGaussianBlur in="l" stdDeviation="${o.blur}" result="band"/>` +
+    `<feTurbulence type="${o.noise ?? "fractalNoise"}" baseFrequency="${o.freq}" numOctaves="${o.octaves ?? 4}" seed="${o.seed}" result="t"/>` +
+    `<feColorMatrix in="t" type="matrix" values="${n}" result="n"/>` +
+    `<feComposite in="n" in2="band" operator="arithmetic" k1="1.6" result="nb0"/>` +
+    (o.patch
+      ? `<feTurbulence type="fractalNoise" baseFrequency="${o.patch}" numOctaves="2" seed="${o.patchSeed ?? 1}" result="pt"/>` +
+        `<feColorMatrix in="pt" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.55" result="pm"/>` +
+        `<feComposite in="nb0" in2="pm" operator="arithmetic" k1="1" result="nb"/>`
+      : `<feComposite in="nb0" in2="nb0" operator="arithmetic" k2="1" result="nb"/>`) +
+    `<feComponentTransfer in="nb" result="a"><feFuncA type="linear" slope="${o.slope}" intercept="${o.intercept}"/></feComponentTransfer>` +
+    `<feFlood flood-color="${o.color}" flood-opacity="${o.opacity ?? 1}"/><feComposite in2="a" operator="in" result="c"/>`;
+  let last = "c";
+  if (o.relief) {
+    f +=
+      `<feDiffuseLighting in="a" surfaceScale="1.6" diffuseConstant="1.25" lighting-color="white" result="lt"><feDistantLight azimuth="235" elevation="50"/></feDiffuseLighting>` +
+      `<feComposite in="c" in2="lt" operator="arithmetic" k1="1.15" result="r"/>`;
+    last = "r";
+  }
+  if (o.displace) {
+    f += `<feDisplacementMap in="${last}" in2="t" scale="${o.displace}" xChannelSelector="R" yChannelSelector="G" result="d"/>`;
+    last = "d";
+  }
+  if (o.rise) {
+    f += `<feOffset in="${last}" dy="${-o.rise}" result="o"/>`;
+    last = "o";
+  }
+  if (o.soften) {
+    f += `<feGaussianBlur in="${last}" stdDeviation="${o.soften}" result="sf"/>`;
+    last = "sf";
+  }
+  if (o.shadow) {
+    f += `<feDropShadow in="${last}" dx="0.35" dy="0.6" stdDeviation="0.45" flood-color="black" flood-opacity="0.55"/>`;
+  }
+  f += `</filter>`;
+  return (
+    `<defs>${f}</defs><g filter="url(#${id})">` +
+    `<polygon points="${outlineAt(shape, o.out)}" fill="none" stroke="white" stroke-width="${o.width}" stroke-linejoin="round"/>` +
+    `<polygon points="${outlineAt(shape, -(o.inner ?? 2))}" fill="black"/></g>`
+  );
+}
+
+function star(cx: number, cy: number, R: number, r: number, points = 5, rot = -90): string {
+  const pts: string[] = [];
+  for (let i = 0; i < points * 2; i++) {
+    const rad = ((rot + (i * 180) / points) * Math.PI) / 180;
+    const d = i % 2 ? r : R;
+    pts.push(`${f1(cx + Math.cos(rad) * d)},${f1(cy + Math.sin(rad) * d)}`);
+  }
+  return pts.join(" ");
+}
+
+/** Positions biased towards the corners and the top, where promo art piles up. */
+function edgeSpots(r: () => number, count: number): number[] {
+  return Array.from({ length: count }, () => {
+    const t = r();
+    return r() < 0.35 ? [0.02, 0.27, 0.5, 0.75][Math.floor(r() * 4)] + (r() - 0.5) * 0.12 : t;
+  });
+}
+
+function overlayBody(id: OverlayId, p: Palette, shape: ShapeId, tone?: OverlayToneId): string {
   const at = perimeter(shape);
   const r = rng(id.length * 7919 + shape.length * 104729 + 17);
-  const pick = <T,>(arr: T[]) => arr[Math.floor(r() * arr.length)];
+  const [main, deep, light] = overlayColors(tone ?? OVERLAYS[id].tone, p);
   let s = "";
 
   switch (id) {
     case "smoke": {
-      s += `<defs><filter id="f" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="3"/><feDisplacementMap in="SourceGraphic" scale="12" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="1.1"/></filter></defs><g filter="url(#f)">`;
-      for (let i = 0; i < 46; i++) {
-        const e = at(r());
-        const off = -1.5 + r() * 7;
-        const cx = e.x + e.nx * off;
-        const cy = e.y + e.ny * off;
-        const ang = (Math.atan2(e.ty, e.tx) * 180) / Math.PI;
-        const color = r() < 0.6 ? p.accent2 : r() < 0.6 ? p.accent : "white";
-        s += `<ellipse cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(4 + r() * 8)}" ry="${f1(1.5 + r() * 3.5)}" transform="rotate(${f1(ang)} ${f1(cx)} ${f1(cy)})" fill="${color}" fill-opacity="${f1(0.25 + r() * 0.4)}"/>`;
-      }
-      // Wisps curling away from the card.
-      for (let i = 0; i < 12; i++) {
-        const e = at(r());
-        const len = 5 + r() * 9;
-        const side = r() < 0.5 ? -1 : 1;
-        const ex = e.x + e.nx * len + e.tx * side * len * 0.6;
-        const ey = e.y + e.ny * len + e.ty * side * len * 0.6;
-        s += `<path d="M${f1(e.x)} ${f1(e.y)} Q${f1(e.x + e.nx * len)} ${f1(e.y + e.ny * len)} ${f1(ex)} ${f1(ey)}" fill="none" stroke="${p.accent2}" stroke-width="${f1(1 + r() * 1.5)}" stroke-opacity="0.45" stroke-linecap="round"/>`;
-      }
-      s += "</g>";
-      break;
-    }
-
-    case "splatter": {
-      const colors = [p.accent2, p.accent2, "white", "oklch(0.2 0 0)"];
-      for (let i = 0; i < 30; i++) {
-        const e = at(r());
-        const off = -3 + r() * 7;
-        const cx = e.x + e.nx * off;
-        const cy = e.y + e.ny * off;
-        const color = pick(colors);
-        const big = 0.5 + r() * r() * 2.6;
-        s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(big)}" fill="${color}"/>`;
-        // satellites flung outward
-        const n = 2 + Math.floor(r() * 5);
-        for (let k = 0; k < n; k++) {
-          const d = big + 0.8 + r() * 5;
-          const sp = (r() - 0.5) * 3;
-          s += `<circle cx="${f1(cx + e.nx * d + e.tx * sp)}" cy="${f1(cy + e.ny * d + e.ty * sp)}" r="${f1(0.15 + r() * 0.5)}" fill="${color}"/>`;
-        }
-        // occasional streak
-        if (r() < 0.35) {
-          const len = 3 + r() * 7;
-          s += `<polygon points="${f1(cx - e.tx * big * 0.6)},${f1(cy - e.ty * big * 0.6)} ${f1(cx + e.tx * big * 0.6)},${f1(cy + e.ty * big * 0.6)} ${f1(cx + e.nx * len)},${f1(cy + e.ny * len)}" fill="${color}"/>`;
-        }
-      }
-      // paint flakes peeling off
-      for (let i = 0; i < 20; i++) {
-        const e = at(r());
-        const off = -1 + r() * 8;
-        const cx = e.x + e.nx * off;
-        const cy = e.y + e.ny * off;
-        const pts = Array.from({ length: 4 }, (_, k) => {
-          const a = (k / 4) * Math.PI * 2 + r() * 0.9;
-          const rad = 0.5 + r() * 1.6;
-          return `${f1(cx + Math.cos(a) * rad)},${f1(cy + Math.sin(a) * rad)}`;
-        });
-        s += `<polygon points="${pts.join(" ")}" fill="oklch(0.92 0.01 250)" stroke="oklch(0.25 0 0)" stroke-width="0.2"/>`;
-      }
-      break;
-    }
-
-    case "shards": {
-      for (let i = 0; i < 16; i++) {
-        const e = at(r());
-        const len = 4 + r() * 10;
-        const w = 1.5 + r() * 3;
-        const lean = (r() - 0.5) * len * 0.8;
-        const b1 = [e.x - e.tx * w / 2 - e.nx * 2, e.y - e.ty * w / 2 - e.ny * 2];
-        const b2 = [e.x + e.tx * w / 2 - e.nx * 2, e.y + e.ty * w / 2 - e.ny * 2];
-        const tip = [e.x + e.nx * len + e.tx * lean, e.y + e.ny * len + e.ty * lean];
-        const mid = [e.x - e.nx * 2, e.y - e.ny * 2];
-        // Some shards take the palette colour; the shaded face is the same colour under black.
-        const base = r() < 0.3 ? p.accent2 : "oklch(0.93 0.01 250)";
-        const face1 = `${f1(b1[0])},${f1(b1[1])} ${f1(mid[0])},${f1(mid[1])} ${f1(tip[0])},${f1(tip[1])}`;
-        const face2 = `${f1(mid[0])},${f1(mid[1])} ${f1(b2[0])},${f1(b2[1])} ${f1(tip[0])},${f1(tip[1])}`;
-        s += `<polygon points="${face1}" fill="${base}"/><polygon points="${face2}" fill="${base}"/><polygon points="${face2}" fill="black" fill-opacity="0.42"/>`;
-        s += `<path d="M${f1(b1[0])} ${f1(b1[1])} L${f1(tip[0])} ${f1(tip[1])} L${f1(b2[0])} ${f1(b2[1])} M${f1(mid[0])} ${f1(mid[1])} L${f1(tip[0])} ${f1(tip[1])}" fill="none" stroke="oklch(0.2 0 0)" stroke-width="0.2" stroke-linejoin="round"/>`;
-      }
-      // small loose fragments
-      for (let i = 0; i < 14; i++) {
-        const e = at(r());
-        const off = 2 + r() * 8;
-        const cx = e.x + e.nx * off;
-        const cy = e.y + e.ny * off;
-        const a = r() * Math.PI * 2;
-        const z = 0.6 + r() * 1.2;
-        s += `<polygon points="${f1(cx + Math.cos(a) * z)},${f1(cy + Math.sin(a) * z)} ${f1(cx + Math.cos(a + 2.3) * z)},${f1(cy + Math.sin(a + 2.3) * z)} ${f1(cx + Math.cos(a + 4) * z * 0.6)},${f1(cy + Math.sin(a + 4) * z * 0.6)}" fill="oklch(0.85 0.01 250)" stroke="oklch(0.2 0 0)" stroke-width="0.15"/>`;
-      }
-      break;
-    }
-
-    case "sparks": {
-      const colors = ["#fff6c8", "#ffc14d", "#ff7a2a", p.accent2];
-      s += `<defs>${GLOW}</defs><g filter="url(#glow)">`;
-      for (let i = 0; i < 70; i++) {
-        const e = at(r());
-        const off = -2 + Math.pow(r(), 1.6) * 14;
-        const cx = e.x + e.nx * off;
-        const cy = e.y + e.ny * off;
-        const color = pick(colors);
-        if (r() < 0.35) {
-          const len = 1.5 + r() * 3.5;
-          const dx = e.nx + (r() - 0.5) * 0.8;
-          const dy = e.ny + (r() - 0.5) * 0.8;
-          s += `<line x1="${f1(cx)}" y1="${f1(cy)}" x2="${f1(cx + dx * len)}" y2="${f1(cy + dy * len)}" stroke="${color}" stroke-width="${f1(0.25 + r() * 0.3)}" stroke-linecap="round"/>`;
-        } else {
-          s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(0.2 + r() * 0.55)}" fill="${color}"/>`;
-        }
-      }
-      s += "</g>";
+      const pz = { patch: 0.028, patchSeed: 4 };
+      // Soft haze, billowing body, then thin curling wisps: inverted turbulence ridges are
+      // thin winding lines — they read as smoke strands once displaced and softened.
+      s += band(shape, "s0", { out: 4, width: 14, inner: 0, blur: 5, freq: "0.02", octaves: 2, seed: 2, slope: 1.3, intercept: -0.2, color: main, opacity: 0.35, ...pz });
+      s += band(shape, "s1", { out: 4, width: 13, inner: 1, blur: 4, freq: "0.03", seed: 11, slope: 1.8, intercept: -0.5, color: main, opacity: 0.75, displace: 5, soften: 0.8, ...pz });
+      s += band(shape, "s2", { out: 4, width: 14, inner: 1, blur: 4, freq: "0.035", octaves: 3, seed: 3, noise: "turbulence", invert: true, slope: 3, intercept: -1.6, color: main, displace: 7, soften: 0.35, ...pz });
+      s += band(shape, "s3", { out: 3.5, width: 12, inner: 1, blur: 3, freq: "0.05", octaves: 3, seed: 8, noise: "turbulence", invert: true, slope: 3.2, intercept: -2, color: light, opacity: 0.85, displace: 6, soften: 0.25, ...pz });
       break;
     }
 
     case "flames": {
-      s += `<defs><filter id="w" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.5" xChannelSelector="R" yChannelSelector="G"/></filter>`;
-      const tongues: string[] = [];
-      for (let i = 0; i < 26; i++) {
-        const e = at(r());
-        const h = 4 + Math.pow(r(), 1.5) * 11;
-        const w = 2 + r() * 3.5;
-        const bx = e.x - e.nx * 1.5;
-        const by = e.y - e.ny * 1.5;
-        const sway = (r() - 0.5) * 5;
-        const tip = [bx + e.nx * h + e.tx * sway, by + e.ny * h + e.ty * sway];
-        const b1 = [bx - e.tx * w / 2, by - e.ty * w / 2];
-        const b2 = [bx + e.tx * w / 2, by + e.ty * w / 2];
-        const c1 = [b1[0] + e.nx * h * 0.55 - e.tx * w * 0.2, b1[1] + e.ny * h * 0.55 - e.ty * w * 0.2];
-        const c2 = [b2[0] + e.nx * h * 0.45 + e.tx * w * 0.3, b2[1] + e.ny * h * 0.45 + e.ty * w * 0.3];
-        s += `<linearGradient id="g${i}" gradientUnits="userSpaceOnUse" x1="${f1(bx)}" y1="${f1(by)}" x2="${f1(tip[0])}" y2="${f1(tip[1])}"><stop offset="0" stop-color="#fff4c2"/><stop offset="0.3" stop-color="${p.accent2}"/><stop offset="0.7" stop-color="${p.accent}"/><stop offset="1" stop-color="${p.accent}" stop-opacity="0"/></linearGradient>`;
-        tongues.push(`<path d="M${f1(b1[0])} ${f1(b1[1])} Q${f1(c1[0])} ${f1(c1[1])} ${f1(tip[0])} ${f1(tip[1])} Q${f1(c2[0])} ${f1(c2[1])} ${f1(b2[0])} ${f1(b2[1])} Z" fill="url(#g${i})" fill-opacity="0.9"/>`);
-      }
-      s += `</defs><g filter="url(#w)">${tongues.join("")}</g>`;
+      // Vertically stretched noise (low y-frequency) + displacement + a lift = tongues rising.
+      const pz = { patch: 0.03, patchSeed: 7 };
+      s += band(shape, "f0", { out: 3, width: 12, inner: 0, blur: 5, freq: "0.03", octaves: 2, seed: 1, slope: 1.2, intercept: -0.2, color: deep, opacity: 0.55, ...pz });
+      s += band(shape, "f1", { out: 4.5, width: 15, inner: 1, blur: 3, freq: "0.11 0.016", seed: 2, slope: 3, intercept: -1, color: deep, opacity: 0.95, displace: 9, rise: 4, ...pz });
+      s += band(shape, "f2", { out: 3.5, width: 11, inner: 1, blur: 2.4, freq: "0.12 0.02", seed: 4, slope: 3.4, intercept: -1.3, color: main, displace: 7, rise: 3, ...pz });
+      s += band(shape, "f3", { out: 2, width: 6, inner: 1, blur: 1.6, freq: "0.13 0.024", seed: 6, slope: 4, intercept: -1.75, color: light, displace: 4, rise: 1.5, ...pz });
       break;
     }
 
-    case "frost": {
-      s += `<defs><filter id="fb"><feGaussianBlur stdDeviation="1.2"/></filter>${GLOW}</defs>`;
-      s += `<g filter="url(#fb)">`;
+    case "splatter": {
+      // A contrasting under-layer gives the chips depth, then the paint itself.
+      const pz = { patch: 0.04, patchSeed: 12 };
+      s += band(shape, "p1", { out: 1.5, width: 7, inner: 2, blur: 1.6, freq: "0.09", seed: 5, slope: 12, intercept: -6.2, color: deep, shadow: true, ...pz });
+      s += band(shape, "p2", { out: 1, width: 6, inner: 2, blur: 1.4, freq: "0.11", seed: 21, slope: 13, intercept: -7, color: main, relief: true, ...pz });
+      s += band(shape, "p3", { out: 0.5, width: 4, inner: 2, blur: 1.1, freq: "0.16", seed: 33, slope: 14, intercept: -8.2, color: light, ...pz });
+      // flung drops and specks
+      for (let i = 0; i < 46; i++) {
+        const e = at(r());
+        const d = 2 + Math.pow(r(), 1.8) * 10;
+        const sp = (r() - 0.5) * 4;
+        s += `<circle cx="${f1(e.x + e.nx * d + e.tx * sp)}" cy="${f1(e.y + e.ny * d + e.ty * sp)}" r="${f1(0.15 + Math.pow(r(), 2) * 0.9)}" fill="${r() < 0.7 ? main : deep}"/>`;
+      }
+      break;
+    }
+
+    case "rubble": {
+      const pz = { patch: 0.035, patchSeed: 19 };
+      s += band(shape, "r1", { out: 2, width: 9, inner: 2, blur: 2, freq: "0.07", seed: 9, slope: 10, intercept: -5.3, color: main, relief: true, shadow: true, ...pz });
+      s += band(shape, "r2", { out: 1, width: 5, inner: 2, blur: 1.4, freq: "0.12", seed: 27, slope: 12, intercept: -7, color: light, relief: true, ...pz });
+      // debris chunks flying off
       for (let i = 0; i < 26; i++) {
         const e = at(r());
-        const off = -1 + r() * 3;
-        s += `<ellipse cx="${f1(e.x + e.nx * off)}" cy="${f1(e.y + e.ny * off)}" rx="${f1(3 + r() * 5)}" ry="${f1(1.5 + r() * 2)}" fill="white" fill-opacity="${f1(0.25 + r() * 0.3)}" transform="rotate(${f1((Math.atan2(e.ty, e.tx) * 180) / Math.PI)} ${f1(e.x + e.nx * off)} ${f1(e.y + e.ny * off)})"/>`;
+        const d = 3 + Math.pow(r(), 1.3) * 9;
+        const cx = e.x + e.nx * d;
+        const cy = e.y + e.ny * d;
+        const z = 0.5 + r() * 1.6;
+        const a0 = r() * Math.PI * 2;
+        const pts = Array.from({ length: 5 }, (_, k) => {
+          const a = a0 + (k / 5) * Math.PI * 2 + (r() - 0.5) * 0.6;
+          const rad = z * (0.6 + r() * 0.5);
+          return `${f1(cx + Math.cos(a) * rad)},${f1(cy + Math.sin(a) * rad)}`;
+        });
+        s += `<polygon points="${pts.join(" ")}" fill="${r() < 0.5 ? main : deep}" stroke="${light}" stroke-width="0.15" stroke-opacity="0.6"/>`;
       }
-      s += `</g><g filter="url(#glow)" stroke="white" stroke-linecap="round" fill="none">`;
-      for (let i = 0; i < 18; i++) {
-        const e = at(r());
-        const off = -1 + r() * 4;
+      break;
+    }
+
+    case "frost":
+      s += band(shape, "i1", { out: 3, width: 12, inner: 0, blur: 3, freq: "0.04", seed: 4, slope: 2, intercept: -0.7, color: main, opacity: 0.7, displace: 4, patch: 0.03, patchSeed: 23 });
+      s += band(shape, "i2", { out: 1.5, width: 8, inner: 1, blur: 1.6, freq: "0.08", octaves: 3, seed: 14, noise: "turbulence", invert: true, slope: 7, intercept: -5.4, color: light, patch: 0.03, patchSeed: 23 });
+      s += `<defs>${GLOW("ig", 0.5)}</defs><g filter="url(#ig)" stroke="${light}" stroke-linecap="round" fill="none">`;
+      for (const t of edgeSpots(r, 11)) {
+        const e = at(t);
+        const off = r() * 4;
         const cx = e.x + e.nx * off;
         const cy = e.y + e.ny * off;
-        const size = 1.8 + r() * 4;
+        const size = 1.5 + r() * 3.5;
         const rot = r() * 60;
         for (let k = 0; k < 6; k++) {
           const a = ((rot + k * 60) * Math.PI) / 180;
-          const ex = cx + Math.cos(a) * size;
-          const ey = cy + Math.sin(a) * size;
-          s += `<line x1="${f1(cx)}" y1="${f1(cy)}" x2="${f1(ex)}" y2="${f1(ey)}" stroke-width="0.35" stroke-opacity="0.9"/>`;
+          s += `<line x1="${f1(cx)}" y1="${f1(cy)}" x2="${f1(cx + Math.cos(a) * size)}" y2="${f1(cy + Math.sin(a) * size)}" stroke-width="0.3"/>`;
           const mx = cx + Math.cos(a) * size * 0.55;
           const my = cy + Math.sin(a) * size * 0.55;
-          for (const da of [-0.6, 0.6]) {
-            s += `<line x1="${f1(mx)}" y1="${f1(my)}" x2="${f1(mx + Math.cos(a + da) * size * 0.3)}" y2="${f1(my + Math.sin(a + da) * size * 0.3)}" stroke-width="0.25" stroke-opacity="0.8"/>`;
+          for (const da of [-0.7, 0.7]) {
+            s += `<line x1="${f1(mx)}" y1="${f1(my)}" x2="${f1(mx + Math.cos(a + da) * size * 0.3)}" y2="${f1(my + Math.sin(a + da) * size * 0.3)}" stroke-width="0.22"/>`;
           }
+        }
+      }
+      s += "</g>";
+      break;
+
+    case "shards": {
+      // Crystal clusters growing out of the frame: each crystal a pointed prism, lit on one face.
+      s += `<defs>${GLOW("cg", 1.2)}</defs>`;
+      s += band(shape, "c0", { out: 3, width: 10, inner: 0, blur: 4, freq: "0.04", seed: 2, slope: 1.4, intercept: -0.4, color: main, opacity: 0.4, patch: 0.03, patchSeed: 31 });
+      let crystals = "";
+      for (const t of edgeSpots(r, 7)) {
+        const e = at(t);
+        const n = 3 + Math.floor(r() * 3);
+        for (let k = 0; k < n; k++) {
+          const ang = Math.atan2(e.ny, e.nx) + (r() - 0.5) * 1.3;
+          const ux = Math.cos(ang);
+          const uy = Math.sin(ang);
+          const vx = -uy;
+          const vy = ux;
+          const len = 6 + r() * 12;
+          const w = 1.5 + r() * 2.2;
+          const bx = e.x + e.tx * (r() - 0.5) * 4 - ux * 2;
+          const by = e.y + e.ty * (r() - 0.5) * 4 - uy * 2;
+          const sh = len * 0.78;
+          const P = (a: number, b: number) => `${f1(bx + ux * a + vx * b)},${f1(by + uy * a + vy * b)}`;
+          const tip = P(len, 0);
+          crystals +=
+            `<polygon points="${P(0, -w)} ${P(sh, -w)} ${tip} ${P(len * 0.5, 0)} ${P(0, 0)}" fill="${light}" fill-opacity="0.9"/>` +
+            `<polygon points="${P(0, 0)} ${P(len * 0.5, 0)} ${tip} ${P(sh, w)} ${P(0, w)}" fill="${main}" fill-opacity="0.92"/>` +
+            `<polygon points="${P(0, w * 0.2)} ${P(sh, w * 0.6)} ${tip} ${P(sh, w)} ${P(0, w)}" fill="${deep}" fill-opacity="0.85"/>` +
+            `<polyline points="${P(0, -w)} ${P(sh, -w)} ${tip} ${P(sh, w)} ${P(0, w)}" fill="none" stroke="white" stroke-width="0.18" stroke-opacity="0.8"/>`;
+        }
+      }
+      s += `<g filter="url(#cg)">${crystals}</g>`;
+      break;
+    }
+
+    case "neon": {
+      s += `<defs><filter id="nb" filterUnits="userSpaceOnUse" ${BOX}><feGaussianBlur stdDeviation="1.3"/></filter></defs>`;
+      const lines: [number, string, string, number][] = [
+        [2.2, main, "52 5 20 4 70 6", 0],
+        [4.6, light, "30 8 60 5 14 7", 23],
+        [7, deep, "18 10 44 7 9 12", 51],
+      ];
+      for (const [d, color, dash, offset] of lines) {
+        const pts = outlineAt(shape, d);
+        const common = `points="${pts}" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${dash}" stroke-dashoffset="${offset}"`;
+        s += `<polygon ${common} stroke="${color}" stroke-width="2.6" stroke-opacity="0.7" filter="url(#nb)"/>`;
+        s += `<polygon ${common} stroke="${color}" stroke-width="0.9"/>`;
+        s += `<polygon ${common} stroke="white" stroke-width="0.3" stroke-opacity="0.85"/>`;
+      }
+      break;
+    }
+
+    case "lightning": {
+      s += band(shape, "l0", { out: 3, width: 11, inner: 0, blur: 4.5, freq: "0.04", seed: 7, slope: 1.4, intercept: -0.45, color: main, opacity: 0.45, patch: 0.03, patchSeed: 37 });
+      // Bolts by midpoint displacement between two points on a ring just outside the card.
+      const bolts: string[] = [];
+      const bolt = (ax: number, ay: number, bx: number, by: number, depth: number): string[] => {
+        if (depth === 0) return [`${f1(bx)},${f1(by)}`];
+        const mx = (ax + bx) / 2 + (r() - 0.5) * Math.hypot(bx - ax, by - ay) * 0.45;
+        const my = (ay + by) / 2 + (r() - 0.5) * Math.hypot(bx - ax, by - ay) * 0.45;
+        if (depth > 2 && r() < 0.3) {
+          bolts.push(`${f1(mx)},${f1(my)} ${bolt(mx, my, mx + (r() - 0.5) * 8, my + (r() - 0.5) * 8, depth - 2).join(" ")}`);
+        }
+        return [...bolt(ax, ay, mx, my, depth - 1), ...bolt(mx, my, bx, by, depth - 1)];
+      };
+      for (const t of edgeSpots(r, 8)) {
+        const a = at(t);
+        const b = at(t + 0.05 + r() * 0.07);
+        const da = 1 + r() * 4;
+        const db = 1 + r() * 5;
+        const ax = a.x + a.nx * da;
+        const ay = a.y + a.ny * da;
+        bolts.push(`${f1(ax)},${f1(ay)} ${bolt(ax, ay, b.x + b.nx * db, b.y + b.ny * db, 5).join(" ")}`);
+      }
+      const draw = (stroke: string, width: number, extra = "") =>
+        bolts.map((b) => `<polyline points="${b}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>`).join("");
+      s += `<defs><filter id="lb" filterUnits="userSpaceOnUse" ${BOX}><feGaussianBlur stdDeviation="1.1"/></filter></defs>`;
+      s += `<g filter="url(#lb)">${draw(main, 2.4, 'stroke-opacity="0.9"')}</g>${draw(main, 0.75)}${draw(light, 0.3)}`;
+      break;
+    }
+
+    case "sparks": {
+      s += band(shape, "e0", { out: 2.5, width: 10, inner: 0, blur: 4, freq: "0.04", seed: 5, slope: 1.4, intercept: -0.45, color: deep, opacity: 0.5, displace: 6, patch: 0.03, patchSeed: 41 });
+      s += `<defs>${GLOW("eg", 0.6)}</defs><g filter="url(#eg)" stroke-linecap="round">`;
+      for (let i = 0; i < 80; i++) {
+        const e = at(r());
+        const d = -1 + Math.pow(r(), 1.7) * 13;
+        const cx = e.x + e.nx * d;
+        const cy = e.y + e.ny * d;
+        const color = r() < 0.45 ? light : main;
+        if (r() < 0.45) {
+          // curved trail drifting outwards
+          const len = 1.5 + r() * 4;
+          const bend = (r() - 0.5) * 2.5;
+          s += `<path d="M${f1(cx)} ${f1(cy)} q${f1(e.nx * len * 0.5 + e.tx * bend)} ${f1(e.ny * len * 0.5 + e.ty * bend)} ${f1(e.nx * len)} ${f1(e.ny * len)}" fill="none" stroke="${color}" stroke-width="${f1(0.2 + r() * 0.3)}"/>`;
+        } else {
+          s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(0.15 + Math.pow(r(), 2) * 0.7)}" fill="${color}"/>`;
         }
       }
       s += "</g>";
       break;
     }
 
-    case "lightning": {
-      s += `<defs><filter id="lb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1"/></filter></defs>`;
-      const bolts: string[] = [];
-      for (let i = 0; i < 8; i++) {
+    case "glitter": {
+      s += band(shape, "g0", { out: 3, width: 11, inner: 0, blur: 5, freq: "0.03", seed: 9, slope: 1.3, intercept: -0.45, color: main, opacity: 0.3, patch: 0.03, patchSeed: 43 });
+      s += `<defs>${GLOW("gg", 0.45)}</defs><g filter="url(#gg)">`;
+      for (let i = 0; i < 140; i++) {
         const e = at(r());
-        const dir = r() < 0.5 ? -1 : 1;
-        let x = e.x;
-        let y = e.y;
-        const pts = [`${f1(x)},${f1(y)}`];
-        const steps = 6 + Math.floor(r() * 4);
-        for (let k = 0; k < steps; k++) {
-          const along = 2.5 + r() * 3;
-          const out = (r() - 0.25) * 3.2;
-          x += e.tx * dir * along + e.nx * out;
-          y += e.ty * dir * along + e.ny * out;
-          pts.push(`${f1(x)},${f1(y)}`);
-          if (r() < 0.25) {
-            const bl = 2 + r() * 4;
-            bolts.push(`${f1(x)},${f1(y)} ${f1(x + e.nx * bl + (r() - 0.5) * 2)},${f1(y + e.ny * bl + (r() - 0.5) * 2)}`);
-          }
-        }
-        bolts.push(pts.join(" "));
+        const d = -2 + Math.pow(r(), 1.5) * 12;
+        s += `<circle cx="${f1(e.x + e.nx * d + e.tx * (r() - 0.5) * 2)}" cy="${f1(e.y + e.ny * d + e.ty * (r() - 0.5) * 2)}" r="${f1(0.1 + Math.pow(r(), 3) * 0.5)}" fill="${r() < 0.5 ? light : main}" fill-opacity="${f1(0.55 + r() * 0.45)}"/>`;
       }
-      const draw = (stroke: string, width: number, extra = "") =>
-        bolts.map((b) => `<polyline points="${b}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>`).join("");
-      s += `<g filter="url(#lb)">${draw(p.accent2, 2.2, 'stroke-opacity="0.6"')}</g>${draw(p.accent2, 0.8)}${draw("white", 0.3)}`;
+      // lens-flare glints
+      for (const t of edgeSpots(r, 7)) {
+        const e = at(t);
+        const d = r() * 4;
+        const cx = e.x + e.nx * d;
+        const cy = e.y + e.ny * d;
+        const z = 2 + r() * 3.5;
+        s += `<path d="M${f1(cx - z)} ${f1(cy)} L${f1(cx + z)} ${f1(cy)} M${f1(cx)} ${f1(cy - z * 1.3)} L${f1(cx)} ${f1(cy + z * 1.3)}" stroke="${light}" stroke-width="0.22" stroke-linecap="round"/>`;
+        s += `<polygon points="${star(cx, cy, z * 0.55, z * 0.12, 4, 0)}" fill="${light}"/>`;
+      }
+      s += "</g>";
       break;
     }
 
-    case "glitter": {
-      const colors = ["white", "oklch(0.92 0.12 90)", "oklch(0.85 0.15 80)", p.accent2];
-      s += `<defs>${GLOW}</defs><g filter="url(#glow)">`;
-      for (let i = 0; i < 80; i++) {
+    case "goldleaf": {
+      s += `<defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light}"/><stop offset="0.45" stop-color="${main}"/><stop offset="0.7" stop-color="${deep}"/><stop offset="1" stop-color="${main}"/></linearGradient><filter id="gs" filterUnits="userSpaceOnUse" ${BOX}><feDropShadow dx="0.3" dy="0.5" stdDeviation="0.4" flood-color="black" flood-opacity="0.5"/></filter></defs><g filter="url(#gs)">`;
+      for (const t of edgeSpots(r, 30)) {
+        const e = at(t);
+        const d = -2.5 + Math.pow(r(), 1.4) * 10;
+        const cx = e.x + e.nx * d;
+        const cy = e.y + e.ny * d;
+        const z = 1.4 + Math.pow(r(), 1.4) * 4.6;
+        const n = 6 + Math.floor(r() * 3);
+        const a0 = r() * Math.PI * 2;
+        const pts = Array.from({ length: n }, (_, k) => {
+          const a = a0 + (k / n) * Math.PI * 2;
+          const rad = z * (0.45 + r() * 0.6);
+          return `${f1(cx + Math.cos(a) * rad)},${f1(cy + Math.sin(a) * rad * 0.8)}`;
+        });
+        s += `<polygon points="${pts.join(" ")}" fill="url(#gl)"/>`;
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "stars": {
+      s += band(shape, "t0", { out: 3, width: 11, inner: 0, blur: 5, freq: "0.03", seed: 6, slope: 1.3, intercept: -0.45, color: main, opacity: 0.3, patch: 0.03, patchSeed: 47 });
+      s += `<defs>${GLOW("tg", 0.6)}</defs><g filter="url(#tg)">`;
+      for (const t of edgeSpots(r, 26)) {
+        const e = at(t);
+        const d = -1 + Math.pow(r(), 1.3) * 9;
+        const cx = e.x + e.nx * d;
+        const cy = e.y + e.ny * d;
+        const z = 1.3 + Math.pow(r(), 2) * 4.2;
+        const rot = -90 + (r() - 0.5) * 40;
+        s += `<polygon points="${star(cx, cy, z, z * 0.45, 5, rot)}" fill="${r() < 0.6 ? light : main}" stroke="${deep}" stroke-width="${f1(z * 0.08)}" stroke-linejoin="round"/>`;
+      }
+      for (let i = 0; i < 40; i++) {
         const e = at(r());
-        const off = -2 + Math.pow(r(), 1.4) * 11;
-        const cx = e.x + e.nx * off;
-        const cy = e.y + e.ny * off;
-        const color = pick(colors);
-        const o = f1(0.6 + r() * 0.4);
-        if (r() < 0.25) {
-          const z = 0.8 + r() * 1.8;
-          const q = z * 0.22;
-          s += `<path d="M${f1(cx)} ${f1(cy - z)} L${f1(cx + q)} ${f1(cy - q)} L${f1(cx + z)} ${f1(cy)} L${f1(cx + q)} ${f1(cy + q)} L${f1(cx)} ${f1(cy + z)} L${f1(cx - q)} ${f1(cy + q)} L${f1(cx - z)} ${f1(cy)} L${f1(cx - q)} ${f1(cy - q)} Z" fill="${color}" fill-opacity="${o}"/>`;
+        const d = Math.pow(r(), 1.3) * 11;
+        s += `<circle cx="${f1(e.x + e.nx * d)}" cy="${f1(e.y + e.ny * d)}" r="${f1(0.15 + r() * 0.3)}" fill="${light}"/>`;
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "confetti": {
+      const colors = [main, deep, light, "oklch(0.88 0.16 90)", "oklch(0.98 0 0)"];
+      s += `<defs><filter id="ks" filterUnits="userSpaceOnUse" ${BOX}><feDropShadow dx="0.2" dy="0.35" stdDeviation="0.25" flood-color="black" flood-opacity="0.45"/></filter></defs><g filter="url(#ks)">`;
+      for (let i = 0; i < 90; i++) {
+        const e = at(r());
+        const d = -1.5 + Math.pow(r(), 1.2) * 11;
+        const cx = e.x + e.nx * d + e.tx * (r() - 0.5) * 3;
+        const cy = e.y + e.ny * d + e.ty * (r() - 0.5) * 3;
+        const color = colors[Math.floor(r() * colors.length)];
+        const rot = f1(r() * 180);
+        const kind = r();
+        if (kind < 0.55) {
+          const w = 1.6 + r() * 2.2;
+          const h = 0.8 + r() * 0.9;
+          s += `<rect x="${f1(cx - w / 2)}" y="${f1(cy - h / 2)}" width="${f1(w)}" height="${f1(h)}" fill="${color}" transform="rotate(${rot} ${f1(cx)} ${f1(cy)})"/>`;
+        } else if (kind < 0.75) {
+          s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(0.6 + r() * 0.7)}" fill="${color}"/>`;
         } else {
-          s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(0.15 + r() * 0.35)}" fill="${color}" fill-opacity="${o}"/>`;
+          // curly streamer
+          const len = 4 + r() * 4;
+          s += `<path d="M${f1(cx)} ${f1(cy)} q${f1(len * 0.25)} ${f1(-len * 0.4)} ${f1(len * 0.5)} 0 t${f1(len * 0.5)} 0" fill="none" stroke="${color}" stroke-width="0.8" stroke-linecap="round" transform="rotate(${rot} ${f1(cx)} ${f1(cy)})"/>`;
         }
       }
       s += "</g>";
@@ -1448,21 +1648,23 @@ function overlayBody(id: OverlayId, p: Palette, shape: ShapeId): string {
     }
 
     case "ink": {
-      s += `<defs><filter id="rough" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="1.6" xChannelSelector="R" yChannelSelector="G"/></filter></defs><g filter="url(#rough)" fill="none" stroke-linecap="round" stroke-linejoin="round">`;
-      for (let i = 0; i < 7; i++) {
-        const t0 = r();
-        const span = 0.05 + r() * 0.1;
+      s += `<defs><filter id="rough" filterUnits="userSpaceOnUse" ${BOX}><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="9" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.4" xChannelSelector="R" yChannelSelector="G"/><feDropShadow dx="0.25" dy="0.4" stdDeviation="0.3" flood-color="black" flood-opacity="0.4"/></filter></defs><g filter="url(#rough)" fill="none" stroke-linecap="round" stroke-linejoin="round">`;
+      for (const t0 of edgeSpots(r, 8)) {
+        const span = 0.05 + r() * 0.08;
         const phase = r() * Math.PI * 2;
-        const color = r() < 0.7 ? p.accent2 : "oklch(0.15 0 0)";
-        const width = 2 + r() * 3;
-        for (const [dOff, w, o] of [[0, width, 0.85], [width * 0.45, 0.4, 0.55], [-width * 0.5, 0.3, 0.45]] as const) {
+        const color = r() < 0.6 ? main : r() < 0.5 ? deep : light;
+        const width = 2.6 + r() * 3;
+        // a main stroke plus thin dry-brush bristle lines alongside it
+        const lines: [number, number, number][] = [[0, width, 0.95]];
+        for (let b = 0; b < 5; b++) lines.push([(r() - 0.5) * width * 1.4, 0.15 + r() * 0.35, 0.5 + r() * 0.4]);
+        for (const [dOff, w, o] of lines) {
           const pts: string[] = [];
-          for (let k = 0; k <= 12; k++) {
-            const e = at(t0 + (span * k) / 12);
-            const off = 1 + Math.sin(phase + k * 0.5) * 2.5 + dOff;
+          for (let k = 0; k <= 14; k++) {
+            const e = at(t0 + (span * k) / 14);
+            const off = 0.5 + Math.sin(phase + k * 0.45) * 2.2 + dOff;
             pts.push(`${f1(e.x + e.nx * off)},${f1(e.y + e.ny * off)}`);
           }
-          s += `<polyline points="${pts.join(" ")}" stroke="${color}" stroke-width="${f1(w)}" stroke-opacity="${o}"/>`;
+          s += `<polyline points="${pts.join(" ")}" stroke="${color}" stroke-width="${f1(w)}" stroke-opacity="${f1(o)}"/>`;
         }
       }
       s += "</g>";
@@ -1476,11 +1678,15 @@ function overlayBody(id: OverlayId, p: Palette, shape: ShapeId): string {
 }
 
 /** The overlay as a CSS image covering the card plus OVERLAY_MARGIN on every side. */
-export function overlayImage(id: OverlayId, p: Palette, shape: ShapeId): string | null {
-  if (id === "none") return null;
+export function overlayImage(id: OverlayId, p: Palette, shape: ShapeId, tone?: OverlayToneId): string | null {
+  if (id === "none" || !OVERLAYS[id]) return null;
   const m = OVERLAY_MARGIN;
+  // Everything fades out towards the edge of the box, so nothing ends in a hard straight cut.
+  const fade =
+    `<defs><filter id="ofb" filterUnits="userSpaceOnUse" ${BOX}><feGaussianBlur stdDeviation="1.6"/></filter>` +
+    `<mask id="ofade" maskUnits="userSpaceOnUse" ${BOX}><rect x="${-m + 3}" y="${-m + 3}" width="${100 + 2 * m - 6}" height="${140 + 2 * m - 6}" fill="white" filter="url(#ofb)"/></mask></defs>`;
   return svgUri(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-m} ${-m} ${100 + 2 * m} ${140 + 2 * m}" preserveAspectRatio="none">${overlayBody(id, p, shape)}</svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-m} ${-m} ${100 + 2 * m} ${140 + 2 * m}" preserveAspectRatio="none">${fade}<g mask="url(#ofade)">${overlayBody(id, p, shape, tone)}</g></svg>`
   );
 }
 
@@ -1723,7 +1929,8 @@ function normalizeDesign(design: CardDesign): CardDesign {
   const photoFilter = design.photoFilter && PHOTO_FILTERS[design.photoFilter] ? design.photoFilter : undefined;
   const nameStyle = design.nameStyle && NAME_STYLES[design.nameStyle] ? design.nameStyle : undefined;
   const overlay = design.overlay && OVERLAYS[design.overlay] ? design.overlay : undefined;
-  return { ...design, shape, frame, pattern, finish, palette, layout, aura, photoFilter, nameStyle, overlay };
+  const overlayTone = design.overlayTone && OVERLAY_TONES[design.overlayTone] ? design.overlayTone : undefined;
+  return { ...design, shape, frame, pattern, finish, palette, layout, aura, photoFilter, nameStyle, overlay, overlayTone };
 }
 
 // Cards created before the design system carry a template category or a seeded template id.

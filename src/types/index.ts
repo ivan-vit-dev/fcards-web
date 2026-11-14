@@ -371,7 +371,28 @@ export type OverlayId =
   | "frost"
   | "lightning"
   | "glitter"
-  | "ink";
+  | "ink"
+  | "rubble"
+  | "neon"
+  | "goldleaf"
+  | "stars"
+  | "confetti";
+/** Colour combination of an overlay; "auto" follows the card palette. */
+export type OverlayToneId =
+  | "auto"
+  | "gold"
+  | "silver"
+  | "white"
+  | "fire"
+  | "ice"
+  | "purple"
+  | "pink"
+  | "ruby"
+  | "toxic"
+  | "electric"
+  | "ocean"
+  | "stone"
+  | "shadow";
 
 export interface CardDesign {
   shape: ShapeId;
@@ -387,6 +408,8 @@ export interface CardDesign {
   photoFilter?: PhotoFilterId;
   nameStyle?: NameStyleId;
   overlay?: OverlayId;
+  /** Overlay colours; default is the overlay's own tone (OVERLAYS[id].tone). */
+  overlayTone?: OverlayToneId;
 }
 
 // ─── Template ─────────────────────────────────────────────────────────────────

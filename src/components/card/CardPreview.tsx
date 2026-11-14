@@ -143,7 +143,10 @@ export function CardPreview({
   const glowBlur = frame.glow ? 0.07 : 0.05;
   const aura = design.aura && design.aura !== "none" && !flat ? design.aura : null;
   const overlayId = design.overlay ?? "none";
-  const overlayUrl = useMemo(() => overlayImage(overlayId, p, design.shape), [overlayId, p, design.shape]);
+  const overlayUrl = useMemo(
+    () => overlayImage(overlayId, p, design.shape, design.overlayTone),
+    [overlayId, p, design.shape, design.overlayTone]
+  );
 
   const badges = resolveBadges(card.badges, design.layout);
   const name = player?.displayName ?? card.playerName ?? "Hráč";
