@@ -10,6 +10,7 @@ import {
   updateUserDoc,
 } from "@/lib/firebaseServices";
 import { ClubForm } from "@/components/club/ClubForm";
+import { effectiveTier } from "@/lib/subscriptionEngine";
 import { ClubBrandingEditor } from "@/components/club/ClubBrandingEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -135,7 +136,7 @@ export default function ClubSettingsPage() {
 
           {/* Branding tab */}
           <TabsContent value="branding" className="pt-5">
-            {user.subscriptionTier === "club" ? (
+            {effectiveTier(user) === "club" ? (
               <ClubBrandingEditor club={club} onUpdate={handleUpdate} />
             ) : (
               <div className="rounded-xl border border-border bg-muted/30 p-6 text-center space-y-3">

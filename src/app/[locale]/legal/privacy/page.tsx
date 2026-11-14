@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AI_PROCESSORS, DIGITAL_CONSENT_AGE, LEGAL_VERSION, OPERATOR } from "@/lib/legal";
+import { isPaidMode } from "@/lib/billing";
 
 export const metadata: Metadata = { title: "Zásady ochrany osobních údajů" };
 
@@ -81,6 +82,12 @@ export default function PrivacyPage() {
       <ul>
         <li>Google Ireland Ltd. / Google LLC – Firebase (přihlášení, databáze, úložiště fotek, serverové funkce, notifikace, analytika)</li>
         <li>Vercel Inc. (USA) – hosting webové aplikace</li>
+        {isPaidMode() && (
+          <li>
+            Stripe Payments Europe, Ltd. (Irsko) – platby předplatného; předáváme e-mail a jméno, platební údaje
+            zadáváte přímo Stripe
+          </li>
+        )}
         {AI_PROCESSORS.map((p) => (
           <li key={p.name}>
             {p.name} – {p.purpose}; předáváme: {p.data}. Jen se souhlasem s AI úpravami.

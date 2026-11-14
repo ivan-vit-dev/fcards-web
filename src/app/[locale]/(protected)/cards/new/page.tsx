@@ -19,12 +19,12 @@ import {
   getTeams,
   getMatches,
   createCard,
-  updateUserDoc,
+  getUserDoc,
 } from "@/lib/firebaseServices";
 import { canGenerateCard, teamSnapshot } from "@/lib/cardEngine";
 import { UpgradeDialog } from "@/components/subscription/UpgradeDialog";
 import { useSyncProgress } from "@/hooks/use-progress";
-import { currentMonth, getCardsGenerated, getUpgradeReason } from "@/lib/subscriptionEngine";
+import { currentMonth, effectiveTier, getCardsGenerated, getUpgradeReason } from "@/lib/subscriptionEngine";
 import type { Card, Match } from "@/types";
 import toast from "react-hot-toast";
 
@@ -68,15 +68,15 @@ export default function NewCardPage() {
         <div className="max-w-lg text-center py-12 space-y-4">
           <p className="text-xl font-display font-bold">Limit dosažen</p>
           <p className="text-sm text-muted-foreground">
-            {getUpgradeReason(user.subscriptionTier, "generate")}
+            {getUpgradeReason(effectiveTier(user), "generate")}
           </p>
           <Button onClick={() => setUpgradeOpen(true)}>Zobrazit plány</Button>
         </div>
         <UpgradeDialog
           open={upgradeOpen}
           onOpenChange={setUpgradeOpen}
-          reason={getUpgradeReason(user.subscriptionTier, "generate")}
-          currentTier={user.subscriptionTier}
+          reason={getUpgradeReason(effectiveTier(user), "generate")}
+          currentTier={effectiveTier(user)}
         />
       </>
     );
@@ -119,16 +119,20 @@ export default function NewCardPage() {
         ...(team && { team: teamSnapshot(team) }),
       });
       addCard(card);
-      const counter = {
-        cardsMonth: currentMonth(),
-        cardsGeneratedThisMonth: getCardsGenerated(user) + 1,
-      };
-      await updateUserDoc(user.uid, counter);
-      setUser({ ...user, ...counter });
+      // The server bumped the monthly counter; mirror it locally for the limit UI.
+      setUser({ ...user, cardsMonth: currentMonth(), cardsGeneratedThisMonth: getCardsGenerated(user) + 1 });
       void syncProgress();
       // Show the pack opening; the card detail opens when the user is done admiring it.
       setRevealed(card);
     } catch (err) {
+      if ((err as { code?: string }).code === "functions/resource-exhausted") {
+        // Counter was ahead of what this browser knew (e.g. cards made on another device).
+        const fresh = await getUserDoc(user.uid).catch(() => null);
+        if (fresh) setUser(fresh); // re-renders into the "Limit dosažen" screen
+        toast.error(getUpgradeReason(effectiveTier(user), "generate"));
+        setUpgradeOpen(true);
+        return;
+      }
       console.warn("[NewCardPage] createCard", err);
       toast.error("Kartičku se nepodařilo vytvořit. Zkuste to prosím znovu.");
     }
@@ -147,7 +151,7 @@ export default function NewCardPage() {
 
       <div className="bg-card border border-border rounded-2xl p-6">
         <CardGeneratorWizard
-          userTier={user.subscriptionTier}
+          userTier={effectiveTier(user)}
           isAdmin={user.role === "superAdmin"}
           locale={locale}
           players={players}

@@ -18,7 +18,7 @@ import { getCardDoc, getPlayerDoc, getTeamDoc } from "@/lib/firebaseServices";
 import { teamSnapshot } from "@/lib/cardEngine";
 import toast from "react-hot-toast";
 import { CUSTOM_DESIGN_TIER, resolveDesign, type Preset } from "@/lib/cardDesign";
-import { tierAtLeast } from "@/lib/subscriptionEngine";
+import { effectiveTier, tierAtLeast } from "@/lib/subscriptionEngine";
 import type { Card, Player } from "@/types";
 
 export default function CardEditorPage() {
@@ -80,7 +80,7 @@ function EditorInner({
     exportPNG,
   } = useCardEditor(initialCard, initialPlayer);
 
-  const tier = user?.subscriptionTier ?? "free";
+  const tier = effectiveTier(user);
   const isAdmin = user?.role === "superAdmin";
   const canUsePreset = (p: Preset) => isAdmin || tierAtLeast(tier, p.requiredTier);
   const customLocked = !isAdmin && !tierAtLeast(tier, CUSTOM_DESIGN_TIER);

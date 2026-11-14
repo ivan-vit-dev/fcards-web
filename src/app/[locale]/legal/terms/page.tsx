@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DIGITAL_CONSENT_AGE, LEGAL_VERSION, OPERATOR } from "@/lib/legal";
+import { isPaidMode } from "@/lib/billing";
 
 export const metadata: Metadata = { title: "Podmínky použití" };
 
@@ -55,10 +56,36 @@ export default function TermsPage() {
       </p>
 
       <h2>5. Tarify a platby</h2>
-      <p>
-        Základní tarif je zdarma. Placené tarify, jejich ceny, fakturace a odstoupení od smlouvy budou popsány
-        zde před spuštěním plateb. [DOPLNIT po napojení plateb.]
-      </p>
+      {isPaidMode() ? (
+        <ul>
+          <li>
+            Základní tarif je zdarma. Placené tarify (Premium, Team) jsou předplatné na měsíc nebo na rok za
+            ceny uvedené v aplikaci v době objednávky. [DOPLNIT: ceny včetně DPH / provozovatel není plátcem DPH.]
+          </li>
+          <li>
+            Platby zpracovává Stripe Payments Europe, Ltd. Údaje o platební kartě provozovatel nezískává.
+            Fakturu najdete ve správě předplatného.
+          </li>
+          <li>
+            Předplatné se automaticky obnovuje na další období a platba se strhne na jeho začátku. Zrušit ho
+            můžete kdykoli v Nastavení → Předplatné → Spravovat předplatné; placené funkce pak zůstanou do konce
+            zaplaceného období. Za nevyčerpanou část období se peníze nevracejí.
+          </li>
+          <li>
+            Když se platba nezdaří, opakujeme ji několik dní. Pokud se nepodaří, tarif se změní na bezplatný;
+            kartičky a data zůstanou.
+          </li>
+          <li>
+            Odstoupení od smlouvy (spotřebitelé): placené funkce se zpřístupní ihned po zaplacení. Objednávkou
+            žádáte o okamžité poskytnutí digitálního obsahu a berete na vědomí, že tím ztrácíte právo odstoupit
+            do 14 dnů (§ 1837 písm. l) občanského zákoníku). [DOPLNIT: ověřit s právníkem, případně přidat
+            zaškrtávací políčko do Stripe Checkout.]
+          </li>
+          <li>Tarif Klub se sjednává individuálně.</li>
+        </ul>
+      ) : (
+        <p>Služba je teď zdarma. Úpravy fotek pomocí AI mají měsíční limit, který je uveden v aplikaci.</p>
+      )}
 
       <h2>6. Dostupnost a odpovědnost</h2>
       <p>

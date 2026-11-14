@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TIER_LABELS, TIER_PRICES_CZK } from "@/lib/subscriptionEngine";
+import { isPaidMode } from "@/lib/billing";
 import type { SubscriptionTier } from "@/types";
 
 interface Props {
@@ -61,6 +62,24 @@ export function UpgradeDialog({ open, onOpenChange, reason, currentTier = "free"
   };
 
   const tiers: Exclude<SubscriptionTier, "free">[] = ["premium", "team", "club"];
+
+  // Free mode: there are no plans to sell — only explain the limit (the monthly AI cap).
+  if (!isPaidMode()) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-display">
+              <Zap className="h-5 w-5 text-primary" />
+              Limit na tento měsíc
+            </DialogTitle>
+            <DialogDescription>{reason ?? "Tato funkce teď není dostupná."}</DialogDescription>
+          </DialogHeader>
+          <Button onClick={() => onOpenChange(false)}>Rozumím</Button>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

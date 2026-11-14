@@ -75,8 +75,23 @@ export interface User {
   fcmToken?: string;
   clubId?: string;
   consents?: UserConsents;
+  stripeCustomerId?: string; // written by Cloud Functions
+  subscription?: UserSubscription; // mirrored from Stripe by the webhook
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export type BillingInterval = "month" | "year";
+
+export interface UserSubscription {
+  id: string;
+  /** Stripe status: active | trialing | past_due | canceled | unpaid | incomplete | … */
+  status: string;
+  tier: SubscriptionTier | null;
+  interval: BillingInterval | null;
+  priceId: string | null;
+  currentPeriodEnd: Timestamp | null;
+  cancelAtPeriodEnd: boolean;
 }
 
 /** Who confirmed the account: a user aged 15+ (Czech age of digital consent) or a parent/guardian. */

@@ -1,5 +1,6 @@
 import type { SubscriptionTier, User } from "@/types";
 import type { PrintFormat } from "./printEngine";
+import { FREE_MODE_AI_CREDITS, isPaidMode } from "./billing";
 
 // ─── Tier limits (static defaults; can be overridden by Firebase Remote Config in prod) ───
 
@@ -64,6 +65,7 @@ export const TIER_LABELS: Record<SubscriptionTier, string> = {
   club: "Klub",
 };
 
+// Display prices — must match the Stripe prices (STRIPE_PRICE_* in functions/.env).
 export const TIER_PRICES_CZK: Record<SubscriptionTier, number | null> = {
   free: 0,
   premium: 149,
@@ -71,7 +73,26 @@ export const TIER_PRICES_CZK: Record<SubscriptionTier, number | null> = {
   club: null, // contact sales
 };
 
+// Yearly = 10 × monthly (two months free).
+export const TIER_PRICES_YEARLY_CZK: Record<SubscriptionTier, number | null> = {
+  free: 0,
+  premium: 1490,
+  team: 3990,
+  club: null,
+};
+
 // ─── Gate functions ───────────────────────────────────────────────────────────
+
+/** Tier whose limits apply. In free billing mode everyone gets everything ("club"). */
+export function effectiveTier(user: User | null): SubscriptionTier {
+  if (!isPaidMode()) return "club";
+  return user?.subscriptionTier ?? "free";
+}
+
+/** Monthly AI credits (-1 = unlimited). Free mode keeps a safety cap: AI jobs cost real money. */
+export function aiCreditLimit(tier: SubscriptionTier): number {
+  return isPaidMode() ? TIER_LIMITS[tier].aiCreditsPerMonth : FREE_MODE_AI_CREDITS;
+}
 
 export function getLimits(tier: SubscriptionTier): TierLimits {
   return TIER_LIMITS[tier];
@@ -90,9 +111,9 @@ export function canUseAI(
   tier: SubscriptionTier,
   aiCreditsUsedThisMonth: number
 ): boolean {
-  const limits = TIER_LIMITS[tier];
-  if (limits.aiCreditsPerMonth === -1) return true;
-  return aiCreditsUsedThisMonth < limits.aiCreditsPerMonth;
+  const limit = aiCreditLimit(tier);
+  if (limit === -1) return true;
+  return aiCreditsUsedThisMonth < limit;
 }
 
 export const currentMonth = () => new Date().toISOString().slice(0, 7);
@@ -117,7 +138,7 @@ export function tierAtLeast(tier: SubscriptionTier, required: SubscriptionTier):
 
 // Returns null for unlimited.
 export function getAICreditsLeft(user: User | null): number | null {
-  const limit = TIER_LIMITS[user?.subscriptionTier ?? "free"].aiCreditsPerMonth;
+  const limit = aiCreditLimit(effectiveTier(user));
   if (limit === -1) return null;
   return Math.max(0, limit - getAICreditsUsed(user));
 }
@@ -150,6 +171,11 @@ export function getUpgradeReason(
   tier: SubscriptionTier,
   action: "generate" | "ai" | "print" | "premiumStyle" | "premiumFeature" | "player" | "team"
 ): string {
+  if (!isPaidMode()) {
+    return action === "ai"
+      ? `Tento měsíc jste využili všech ${FREE_MODE_AI_CREDITS} AI úprav. Nové budou k dispozici 1. dne příštího měsíce.`
+      : "Tato funkce teď není dostupná.";
+  }
   const reasons: Record<string, string> = {
     generate: `Bezplatný plán umožňuje max. ${TIER_LIMITS.free.cardsPerMonth} kartičky měsíčně.`,
     ai: `Bezplatný plán umožňuje max. ${TIER_LIMITS.free.aiCreditsPerMonth} AI kredity měsíčně.`,

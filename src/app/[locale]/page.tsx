@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { LegalFooter } from "@/components/legal/LegalFooter";
+import { FREE_MODE_AI_CREDITS, isPaidMode } from "@/lib/billing";
+import { TIER_LIMITS, TIER_PRICES_CZK, TIER_PRICES_YEARLY_CZK } from "@/lib/subscriptionEngine";
 import { Button } from "@/components/ui/button";
 import {
   CreditCard,
@@ -116,52 +118,74 @@ export default function LandingPage() {
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-display font-bold mb-3">Plány a ceny</h2>
+          <h2 className="text-3xl font-display font-bold mb-3">
+            {isPaidMode() ? "Plány a ceny" : "Zdarma pro všechny"}
+          </h2>
           <p className="text-muted-foreground mb-10">
-            Začněte zdarma, upgradujte podle potřeby
+            {isPaidMode()
+              ? "Začněte zdarma, upgradujte podle potřeby"
+              : "Všechny funkce jsou teď odemčené a nic neplatíte."}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto">
-            {/* Free */}
-            <div className="bg-card border border-border rounded-2xl p-6 text-left space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Zdarma</p>
-                <p className="text-3xl font-display font-bold">0 Kč</p>
-                <p className="text-xs text-muted-foreground mt-1">navždy</p>
+          {isPaidMode() ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto">
+              {/* Free */}
+              <div className="bg-card border border-border rounded-2xl p-6 text-left space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Zdarma</p>
+                  <p className="text-3xl font-display font-bold">0 Kč</p>
+                  <p className="text-xs text-muted-foreground mt-1">navždy</p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>✓ {TIER_LIMITS.free.cardsPerMonth} kartičky měsíčně</li>
+                  <li>✓ {TIER_LIMITS.free.aiCreditsPerMonth} AI úpravy měsíčně</li>
+                  <li>✓ Základní designy</li>
+                  <li>✓ Sdílení na sociálních sítích</li>
+                  <li>✓ Až {TIER_LIMITS.free.maxPlayers} hráči</li>
+                </ul>
+                <Link href="/cs/auth/register">
+                  <Button variant="outline" className="w-full">Začít zdarma</Button>
+                </Link>
               </div>
+              {/* Premium */}
+              <div className="bg-card border-2 border-primary rounded-2xl p-6 text-left space-y-4 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
+                    Nejoblíbenější
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Premium</p>
+                  <p className="text-3xl font-display font-bold">{TIER_PRICES_CZK.premium} Kč</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    měsíčně · nebo {TIER_PRICES_YEARLY_CZK.premium?.toLocaleString("cs-CZ")} Kč ročně
+                  </p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>✓ {TIER_LIMITS.premium.cardsPerMonth} kartiček měsíčně</li>
+                  <li>✓ AI Studio ({TIER_LIMITS.premium.aiCreditsPerMonth} úprav měsíčně)</li>
+                  <li>✓ Tisk kartiček</li>
+                  <li>✓ Všechny designy</li>
+                  <li>✓ Neomezený počet hráčů</li>
+                </ul>
+                <Link href="/cs/auth/register">
+                  <Button className="w-full">Vyzkoušet Premium</Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-card border-2 border-primary rounded-2xl p-6 text-left space-y-4 max-w-md mx-auto">
+              <p className="text-3xl font-display font-bold">0 Kč</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>✓ 20 kartiček měsíčně</li>
-                <li>✓ Základní šablony</li>
-                <li>✓ Sdílení na sociálních sítích</li>
-                <li>✓ 1 hráčský profil</li>
+                <li>✓ Neomezené kartičky a všechny designy</li>
+                <li>✓ AI Studio ({FREE_MODE_AI_CREDITS} úprav měsíčně)</li>
+                <li>✓ Tisk kartiček</li>
+                <li>✓ Neomezený počet hráčů a týmů</li>
               </ul>
               <Link href="/cs/auth/register">
-                <Button variant="outline" className="w-full">Začít zdarma</Button>
+                <Button className="w-full">Začít zdarma</Button>
               </Link>
             </div>
-            {/* Premium */}
-            <div className="bg-card border-2 border-primary rounded-2xl p-6 text-left space-y-4 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
-                  Nejoblíbenější
-                </span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Premium</p>
-                <p className="text-3xl font-display font-bold">149 Kč</p>
-                <p className="text-xs text-muted-foreground mt-1">měsíčně</p>
-              </div>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>✓ Neomezené kartičky</li>
-                <li>✓ AI Studio (50 kreditů/měsíc)</li>
-                <li>✓ HD export pro tisk</li>
-                <li>✓ Všechny šablony</li>
-                <li>✓ Neomezené profily</li>
-              </ul>
-              <Link href="/cs/auth/register">
-                <Button className="w-full">Vyzkoušet Premium</Button>
-              </Link>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 

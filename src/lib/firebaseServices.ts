@@ -25,6 +25,7 @@ import { generateSlug } from "./utils";
 import { SEED_ACHIEVEMENTS, SEED_TEMPLATES } from "./seedData";
 import type {
   AgeConfirmation,
+  BillingInterval,
   ContentReport,
   ReportReason,
   ReportTargetType,
@@ -113,6 +114,28 @@ export async function exportMyData(uid: string): Promise<Record<string, unknown>
     getClubsByOwner(uid),
   ]);
   return { exportedAt: new Date().toISOString(), user, players, cards, teams, clubs, achievements };
+}
+
+// ─── Billing (Stripe, via Cloud Functions; paid mode only) ─────────────────
+
+/** Returns the Stripe Checkout URL for a new subscription. */
+export async function createCheckoutSession(
+  tier: "premium" | "team",
+  interval: BillingInterval,
+  locale: string
+): Promise<string> {
+  const { data } = await httpsCallable<object, { url: string }>(functions, "createCheckoutSession")({
+    tier,
+    interval,
+    locale,
+  });
+  return data.url;
+}
+
+/** Returns the Stripe Customer Portal URL (change plan, cancel, card, invoices). */
+export async function createPortalSession(locale: string): Promise<string> {
+  const { data } = await httpsCallable<object, { url: string }>(functions, "createPortalSession")({ locale });
+  return data.url;
 }
 
 // ─── Moderation ─────────────────────────────────────────────────────────────
@@ -444,18 +467,18 @@ export async function incrementCardPrintCount(cardId: string): Promise<void> {
   });
 }
 
+/**
+ * Cards are created by the `createCard` Cloud Function, which enforces the monthly limit and
+ * bumps the user's counter in the same transaction. Throws `functions/resource-exhausted`
+ * when the limit is reached.
+ */
 export async function createCard(data: Partial<Card>): Promise<Card> {
-  const ref = await addDoc(collection(db, "cards"), {
-    aiStatus: "pending",
-    effect: "none",
-    shareCount: 0,
-    printCount: 0,
-    isPublic: false,
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  return { id: ref.id, ...data } as Card;
+  const { data: res } = await httpsCallable<{ card: Partial<Card> }, { id: string }>(
+    functions,
+    "createCard"
+  )({ card: data });
+  const created = await getCardDoc(res.id);
+  return created ?? ({ id: res.id, aiStatus: "done", effect: "none", shareCount: 0, printCount: 0, isPublic: false, ...data } as Card);
 }
 
 export async function updateCard(cardId: string, data: Partial<Card>): Promise<void> {

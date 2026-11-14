@@ -9,7 +9,11 @@ import sharp from "sharp";
 import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 
+import { FREE_MODE_AI_CREDITS, STRIPE_SECRET_KEY, cancelSubscriptionsFor, effectiveTier, paidMode } from "./billing";
+
 admin.initializeApp();
+
+export { createCheckoutSession, createPortalSession, stripeWebhook } from "./billing";
 const db = admin.firestore();
 const storage = admin.storage();
 const { FieldValue } = admin.firestore;
@@ -91,14 +95,15 @@ async function startJob(uid: string, cardId: string, premium: boolean): Promise<
       throw new HttpsError("permission-denied", "AI processing consent required.");
     }
     const isAdmin = user.role === "superAdmin";
-    const tier: string = user.subscriptionTier ?? "free";
+    const tier = effectiveTier(user);
     if (premium && tier === "free" && !isAdmin) {
       throw new HttpsError("failed-precondition", "This feature requires a paid plan.");
     }
 
     const month = currentMonth();
     const used: number = user.aiCreditsMonth === month ? (user.aiCreditsUsedThisMonth ?? 0) : 0;
-    const limit = AI_CREDITS_PER_MONTH[tier] ?? 0;
+    // Free mode: no plans, but AI jobs still cost money → a monthly safety cap for everyone.
+    const limit = paidMode() ? (AI_CREDITS_PER_MONTH[tier] ?? 0) : FREE_MODE_AI_CREDITS.value();
     if (!isAdmin && limit !== -1 && used >= limit) {
       throw new HttpsError("resource-exhausted", "Monthly AI credits used up.");
     }
@@ -570,6 +575,68 @@ export const syncProgress = onCall(async (request) => {
   });
 });
 
+// ─── createCard (monthly card limit) ─────────────────────────────────────────
+// Cards are created only here, so the monthly limit can't be skipped from the browser: the
+// limit check, the card and the counter are one transaction. Firestore rules deny client
+// creates and client writes to cardsGeneratedThisMonth / cardsMonth.
+
+// Keep in sync with TIER_LIMITS.cardsPerMonth in src/lib/subscriptionEngine.ts (-1 = unlimited).
+const CARDS_PER_MONTH: Record<string, number> = { free: 3, premium: 20, team: 50, club: -1 };
+
+// Fields the server owns; whatever the client sends for them is ignored.
+const SERVER_CARD_FIELDS = [
+  "id", "userId", "moderation", "isPublic", "aiStatus", "aiJobId", "shareCount", "printCount",
+  "photoVersions", "createdAt", "updatedAt",
+];
+const MAX_CARD_BYTES = 100_000;
+
+export const createCard = onCall(async (request) => {
+  const uid = requireAuth(request);
+  const input = request.data?.card;
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new HttpsError("invalid-argument", "card is required.");
+  }
+  if (JSON.stringify(input).length > MAX_CARD_BYTES) {
+    throw new HttpsError("invalid-argument", "Card data too large.");
+  }
+  const data: Record<string, unknown> = { ...input };
+  for (const key of SERVER_CARD_FIELDS) delete data[key];
+  const playerId = requireString(data.playerId, "playerId");
+  requireString(data.shareSlug, "shareSlug");
+  if (!(await db.doc(`users/${uid}/players/${playerId}`).get()).exists) {
+    throw new HttpsError("not-found", "Player not found.");
+  }
+
+  const userRef = db.doc(`users/${uid}`);
+  const cardRef = db.collection("cards").doc();
+  await db.runTransaction(async (tx) => {
+    const user = (await tx.get(userRef)).data() ?? {};
+    const month = currentMonth();
+    const used: number = user.cardsMonth === month ? (user.cardsGeneratedThisMonth ?? 0) : 0;
+    const limit = CARDS_PER_MONTH[effectiveTier(user)] ?? 0; // free mode → "club" → unlimited
+    if (user.role !== "superAdmin" && limit !== -1 && used >= limit) {
+      throw new HttpsError("resource-exhausted", "Monthly card limit reached.");
+    }
+    tx.set(cardRef, {
+      aiStatus: "done",
+      effect: "none",
+      ...data,
+      userId: uid,
+      isPublic: false,
+      shareCount: 0,
+      printCount: 0,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    tx.update(userRef, {
+      cardsMonth: month,
+      cardsGeneratedThisMonth: used + 1,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+  return { id: cardRef.id };
+});
+
 // ─── Moderation ──────────────────────────────────────────────────────────────
 // Anyone (guests too) can report a public card or player profile. Reports aggregate into one
 // doc per target; after AUTO_HIDE_AT distinct reporters the content is hidden until a
@@ -737,9 +804,18 @@ async function deleteQuery(q: admin.firestore.Query): Promise<void> {
   await Promise.all(snap.docs.map((d) => db.recursiveDelete(d.ref)));
 }
 
-export const deleteAccount = onCall({ timeoutSeconds: 540, memory: "512MiB" }, async (request) => {
+export const deleteAccount = onCall({ timeoutSeconds: 540, memory: "512MiB", secrets: [STRIPE_SECRET_KEY] }, async (request) => {
   const uid = requireAuth(request);
   const bucket = storage.bucket();
+
+  // Stop billing first: if this fails, nothing is deleted and the user can retry.
+  const userData = (await db.doc(`users/${uid}`).get()).data() ?? {};
+  try {
+    await cancelSubscriptionsFor(userData);
+  } catch (err) {
+    console.error("deleteAccount: cancelling subscription failed", err instanceof Error ? err.message : err);
+    throw new HttpsError("internal", "Could not cancel the subscription.");
+  }
 
   // Cards: each delete fires onCardDeleted, which removes the card's images.
   await deleteQuery(db.collection("cards").where("userId", "==", uid));

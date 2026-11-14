@@ -12,7 +12,7 @@ import { useCardsStore, usePlayersStore } from "@/store/appStore";
 import { getCards, getPlayers, incrementCardPrintCount } from "@/lib/firebaseServices";
 import { exportCardsToPDF, PRINT_FORMATS, type PrintFormat } from "@/lib/printEngine";
 import { resolveDesign, shapeOutline } from "@/lib/cardDesign";
-import { TIER_LABELS, canPrint, canUsePrintFormat } from "@/lib/subscriptionEngine";
+import { TIER_LABELS, canPrint, canUsePrintFormat, effectiveTier } from "@/lib/subscriptionEngine";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
@@ -58,7 +58,7 @@ function PrintCenter() {
       .finally(() => setLoading(false));
   }, [uid, setCards, setPlayers]);
 
-  const tier = user?.subscriptionTier ?? "free";
+  const tier = effectiveTier(user);
   const isAdmin = user?.role === "superAdmin";
   const hasPrintAccess = isAdmin || canPrint(tier);
 

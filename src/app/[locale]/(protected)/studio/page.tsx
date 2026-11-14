@@ -51,7 +51,13 @@ import {
 } from "@/lib/firebaseServices";
 import { hasAIConsent } from "@/lib/legal";
 import { AIConsentDialog } from "@/components/legal/AIConsentDialog";
-import { canUseAI, getAICreditsLeft, getAICreditsUsed, getUpgradeReason } from "@/lib/subscriptionEngine";
+import {
+  canUseAI,
+  effectiveTier,
+  getAICreditsLeft,
+  getAICreditsUsed,
+  getUpgradeReason,
+} from "@/lib/subscriptionEngine";
 import {
   EMOTION_OPTIONS,
   POSE_OPTIONS,
@@ -208,7 +214,7 @@ function StudioContent() {
   const versions: PhotoVersion[] = card?.photoVersions ?? [];
   const currentVersion = versions.find((v) => v.url === sourceImage);
 
-  const tier = user?.subscriptionTier ?? "free";
+  const tier = effectiveTier(user);
   const isAdmin = user?.role === "superAdmin";
   const premiumAllowed = isAdmin || tier !== "free";
   const creditsLeft = getAICreditsLeft(user);

@@ -153,6 +153,10 @@ if (!canGenerateCard(user, currentMonthCount)) {
 
 Subscription tier is stored on `user.subscriptionTier`. All gating logic lives in `src/lib/subscriptionEngine.ts`.
 
+**Billing mode** (`NEXT_PUBLIC_BILLING_MODE` on the web, `BILLING_MODE` in `functions/.env`, must match): `paid` = tiers + Stripe subscriptions; `free`/unset = everyone gets everything (`effectiveTier()` → `"club"` on client and server) except a monthly AI cap (`FREE_MODE_AI_CREDITS`). Always gate with `effectiveTier(user)`, never `user.subscriptionTier` directly. Stripe code lives in `functions/src/billing.ts` (Checkout, Customer Portal, `stripeWebhook` mirrors the subscription onto `users/{uid}.subscription` + `subscriptionTier`); setup steps in `docs/STRIPE.md`.
+
+Client gates are for UX; anything that costs money or is a paid limit is enforced server-side: AI credits in `startJob`, the monthly card limit in the `createCard` callable (the only way to create a card — rules deny client creates and client writes to `cardsGeneratedThisMonth`/`cardsMonth`). Server copies of the limits (`AI_CREDITS_PER_MONTH`, `CARDS_PER_MONTH` in functions/src/index.ts) must match `TIER_LIMITS`.
+
 ### Color system
 
 Gold palette — hue **75** (amber gold), NOT 285 (violet from flive-web). Use `oklch()` full values everywhere.
@@ -222,9 +226,18 @@ NEXT_PUBLIC_FIREBASE_APP_ID
 NEXT_PUBLIC_FIREBASE_VAPID_KEY
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 
-# Server-side — Cloud Functions only, NEVER in .env.local
+NEXT_PUBLIC_BILLING_MODE              # "paid" | "free" (default free)
+NEXT_PUBLIC_FREE_MODE_AI_CREDITS      # display only, default 20
+
+# Server-side secrets — Cloud Functions only (firebase functions:secrets:set), NEVER in .env.local
 ANTHROPIC_API_KEY
 REPLICATE_API_KEY
+STRIPE_SECRET_KEY                     # placeholder value is fine while BILLING_MODE=free
+STRIPE_WEBHOOK_SECRET
+
+# Cloud Functions params — functions/.env (not secret)
+BILLING_MODE, FREE_MODE_AI_CREDITS, APP_URL,
+STRIPE_PRICE_PREMIUM_MONTHLY, STRIPE_PRICE_PREMIUM_YEARLY, STRIPE_PRICE_TEAM_MONTHLY, STRIPE_PRICE_TEAM_YEARLY
 ```
 
 ---
