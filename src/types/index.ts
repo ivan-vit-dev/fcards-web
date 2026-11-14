@@ -360,6 +360,18 @@ export type FinishId = "none" | "gloss" | "refractor" | "prizm" | "shimmer" | "g
 export type AuraId = "none" | "glow" | "smoke" | "fire";
 export type PhotoFilterId = "none" | "mono" | "warm" | "duo";
 export type NameStyleId = "block" | "signature" | "outline";
+/** Decoration laid over the frame that breaks the card's outline (smoke, splatter, shards…). */
+export type OverlayId =
+  | "none"
+  | "smoke"
+  | "splatter"
+  | "shards"
+  | "sparks"
+  | "flames"
+  | "frost"
+  | "lightning"
+  | "glitter"
+  | "ink";
 
 export interface CardDesign {
   shape: ShapeId;
@@ -374,6 +386,7 @@ export interface CardDesign {
   aura?: AuraId;
   photoFilter?: PhotoFilterId;
   nameStyle?: NameStyleId;
+  overlay?: OverlayId;
 }
 
 // ─── Template ─────────────────────────────────────────────────────────────────

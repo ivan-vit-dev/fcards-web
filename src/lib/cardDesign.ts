@@ -15,13 +15,14 @@ import type {
   FrameId,
   LayoutId,
   NameStyleId,
+  OverlayId,
   PatternId,
   PhotoFilterId,
   ShapeId,
   SubscriptionTier,
 } from "@/types";
 
-export type { AuraId, CardDesign, FinishId, FrameId, LayoutId, NameStyleId, PatternId, PhotoFilterId, ShapeId };
+export type { AuraId, CardDesign, FinishId, FrameId, LayoutId, NameStyleId, OverlayId, PatternId, PhotoFilterId, ShapeId };
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
 
@@ -1145,6 +1146,344 @@ export const NAME_STYLES: Record<NameStyleId, { nameCs: string }> = {
   outline: { nameCs: "Obrys" },
 };
 
+// ─── Overlays (decoration over the frame) ─────────────────────────────────────
+// Smoke, splatter, shards, sparks… laid ON TOP of the frame and spilling past the card's
+// outline, the way promo cards break their own silhouette. Drawn procedurally along the shape's
+// perimeter (so they hug any shape) as one SVG in a box 12 units larger than the card on every
+// side: viewBox −12 −12 124 164 over the 100 × 140 card. A data URI, so ids never clash
+// between cards on the same page.
+
+export const OVERLAY_MARGIN = 12;
+
+export const OVERLAYS: Record<OverlayId, { nameCs: string; descriptionCs: string }> = {
+  none: { nameCs: "Žádné", descriptionCs: "Čistý okraj" },
+  smoke: { nameCs: "Kouř", descriptionCs: "Barevný kouř obtékající rám" },
+  splatter: { nameCs: "Stříkance", descriptionCs: "Kapky barvy a odlétající šupinky" },
+  shards: { nameCs: "Úlomky", descriptionCs: "Kovové střepy trčící z okraje" },
+  sparks: { nameCs: "Jiskry", descriptionCs: "Žhavé jiskry odletující od rámu" },
+  flames: { nameCs: "Plameny", descriptionCs: "Jazyky ohně šlehající přes okraj" },
+  frost: { nameCs: "Námraza", descriptionCs: "Ledové krystalky na rámu" },
+  lightning: { nameCs: "Blesky", descriptionCs: "Elektrické výboje kolem karty" },
+  glitter: { nameCs: "Třpytky", descriptionCs: "Zlatý prach a hvězdičky" },
+  ink: { nameCs: "Tahy štětcem", descriptionCs: "Hrubé tahy barvy přes rám" },
+};
+
+type EdgePoint = { x: number; y: number; nx: number; ny: number; tx: number; ty: number };
+
+function outlinePoints(shape: ShapeId): Pt[] {
+  const def = SHAPES[shape];
+  if (def.polygon) return def.polygon;
+  const r = (def.radius ?? 0) * 100;
+  const pts: Pt[] = [];
+  const corners: [number, number, number][] = [[r, r, 180], [100 - r, r, 270], [100 - r, 140 - r, 0], [r, 140 - r, 90]];
+  for (const [cx, cy, a0] of corners) {
+    for (let a = a0; a <= a0 + 90; a += 15) {
+      const rad = (a * Math.PI) / 180;
+      pts.push([cx + r * Math.cos(rad), cy + r * Math.sin(rad)]);
+    }
+  }
+  return pts;
+}
+
+/** Point on the outline at t (0–1 of the perimeter) with outward normal and tangent. */
+function perimeter(shape: ShapeId): (t: number) => EdgePoint {
+  const pts = outlinePoints(shape);
+  const segs: { ax: number; ay: number; dx: number; dy: number; len: number; start: number }[] = [];
+  let total = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[(i + 1) % pts.length];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len < 1e-6) continue;
+    segs.push({ ax, ay, dx: bx - ax, dy: by - ay, len, start: total });
+    total += len;
+  }
+  return (t) => {
+    const d = (((t % 1) + 1) % 1) * total;
+    const s = segs.find((g) => d <= g.start + g.len) ?? segs[segs.length - 1];
+    const k = (d - s.start) / s.len;
+    const x = s.ax + s.dx * k;
+    const y = s.ay + s.dy * k;
+    const tx = s.dx / s.len;
+    const ty = s.dy / s.len;
+    let nx = ty;
+    let ny = -tx;
+    if (nx * (x - 50) + ny * (y - 70) < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    return { x, y, nx, ny, tx, ty };
+  };
+}
+
+const f1 = (n: number) => +n.toFixed(2);
+
+const GLOW = `<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+
+function overlayBody(id: OverlayId, p: Palette, shape: ShapeId): string {
+  const at = perimeter(shape);
+  const r = rng(id.length * 7919 + shape.length * 104729 + 17);
+  const pick = <T,>(arr: T[]) => arr[Math.floor(r() * arr.length)];
+  let s = "";
+
+  switch (id) {
+    case "smoke": {
+      s += `<defs><filter id="f" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="3"/><feDisplacementMap in="SourceGraphic" scale="12" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="1.1"/></filter></defs><g filter="url(#f)">`;
+      for (let i = 0; i < 46; i++) {
+        const e = at(r());
+        const off = -1.5 + r() * 7;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const ang = (Math.atan2(e.ty, e.tx) * 180) / Math.PI;
+        const color = r() < 0.6 ? p.accent2 : r() < 0.6 ? p.accent : "white";
+        s += `<ellipse cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(4 + r() * 8)}" ry="${f1(1.5 + r() * 3.5)}" transform="rotate(${f1(ang)} ${f1(cx)} ${f1(cy)})" fill="${color}" fill-opacity="${f1(0.25 + r() * 0.4)}"/>`;
+      }
+      // Wisps curling away from the card.
+      for (let i = 0; i < 12; i++) {
+        const e = at(r());
+        const len = 5 + r() * 9;
+        const side = r() < 0.5 ? -1 : 1;
+        const ex = e.x + e.nx * len + e.tx * side * len * 0.6;
+        const ey = e.y + e.ny * len + e.ty * side * len * 0.6;
+        s += `<path d="M${f1(e.x)} ${f1(e.y)} Q${f1(e.x + e.nx * len)} ${f1(e.y + e.ny * len)} ${f1(ex)} ${f1(ey)}" fill="none" stroke="${p.accent2}" stroke-width="${f1(1 + r() * 1.5)}" stroke-opacity="0.45" stroke-linecap="round"/>`;
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "splatter": {
+      const colors = [p.accent2, p.accent2, "white", "oklch(0.2 0 0)"];
+      for (let i = 0; i < 30; i++) {
+        const e = at(r());
+        const off = -3 + r() * 7;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const color = pick(colors);
+        const big = 0.5 + r() * r() * 2.6;
+        s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(big)}" fill="${color}"/>`;
+        // satellites flung outward
+        const n = 2 + Math.floor(r() * 5);
+        for (let k = 0; k < n; k++) {
+          const d = big + 0.8 + r() * 5;
+          const sp = (r() - 0.5) * 3;
+          s += `<circle cx="${f1(cx + e.nx * d + e.tx * sp)}" cy="${f1(cy + e.ny * d + e.ty * sp)}" r="${f1(0.15 + r() * 0.5)}" fill="${color}"/>`;
+        }
+        // occasional streak
+        if (r() < 0.35) {
+          const len = 3 + r() * 7;
+          s += `<polygon points="${f1(cx - e.tx * big * 0.6)},${f1(cy - e.ty * big * 0.6)} ${f1(cx + e.tx * big * 0.6)},${f1(cy + e.ty * big * 0.6)} ${f1(cx + e.nx * len)},${f1(cy + e.ny * len)}" fill="${color}"/>`;
+        }
+      }
+      // paint flakes peeling off
+      for (let i = 0; i < 20; i++) {
+        const e = at(r());
+        const off = -1 + r() * 8;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const pts = Array.from({ length: 4 }, (_, k) => {
+          const a = (k / 4) * Math.PI * 2 + r() * 0.9;
+          const rad = 0.5 + r() * 1.6;
+          return `${f1(cx + Math.cos(a) * rad)},${f1(cy + Math.sin(a) * rad)}`;
+        });
+        s += `<polygon points="${pts.join(" ")}" fill="oklch(0.92 0.01 250)" stroke="oklch(0.25 0 0)" stroke-width="0.2"/>`;
+      }
+      break;
+    }
+
+    case "shards": {
+      for (let i = 0; i < 16; i++) {
+        const e = at(r());
+        const len = 4 + r() * 10;
+        const w = 1.5 + r() * 3;
+        const lean = (r() - 0.5) * len * 0.8;
+        const b1 = [e.x - e.tx * w / 2 - e.nx * 2, e.y - e.ty * w / 2 - e.ny * 2];
+        const b2 = [e.x + e.tx * w / 2 - e.nx * 2, e.y + e.ty * w / 2 - e.ny * 2];
+        const tip = [e.x + e.nx * len + e.tx * lean, e.y + e.ny * len + e.ty * lean];
+        const mid = [e.x - e.nx * 2, e.y - e.ny * 2];
+        // Some shards take the palette colour; the shaded face is the same colour under black.
+        const base = r() < 0.3 ? p.accent2 : "oklch(0.93 0.01 250)";
+        const face1 = `${f1(b1[0])},${f1(b1[1])} ${f1(mid[0])},${f1(mid[1])} ${f1(tip[0])},${f1(tip[1])}`;
+        const face2 = `${f1(mid[0])},${f1(mid[1])} ${f1(b2[0])},${f1(b2[1])} ${f1(tip[0])},${f1(tip[1])}`;
+        s += `<polygon points="${face1}" fill="${base}"/><polygon points="${face2}" fill="${base}"/><polygon points="${face2}" fill="black" fill-opacity="0.42"/>`;
+        s += `<path d="M${f1(b1[0])} ${f1(b1[1])} L${f1(tip[0])} ${f1(tip[1])} L${f1(b2[0])} ${f1(b2[1])} M${f1(mid[0])} ${f1(mid[1])} L${f1(tip[0])} ${f1(tip[1])}" fill="none" stroke="oklch(0.2 0 0)" stroke-width="0.2" stroke-linejoin="round"/>`;
+      }
+      // small loose fragments
+      for (let i = 0; i < 14; i++) {
+        const e = at(r());
+        const off = 2 + r() * 8;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const a = r() * Math.PI * 2;
+        const z = 0.6 + r() * 1.2;
+        s += `<polygon points="${f1(cx + Math.cos(a) * z)},${f1(cy + Math.sin(a) * z)} ${f1(cx + Math.cos(a + 2.3) * z)},${f1(cy + Math.sin(a + 2.3) * z)} ${f1(cx + Math.cos(a + 4) * z * 0.6)},${f1(cy + Math.sin(a + 4) * z * 0.6)}" fill="oklch(0.85 0.01 250)" stroke="oklch(0.2 0 0)" stroke-width="0.15"/>`;
+      }
+      break;
+    }
+
+    case "sparks": {
+      const colors = ["#fff6c8", "#ffc14d", "#ff7a2a", p.accent2];
+      s += `<defs>${GLOW}</defs><g filter="url(#glow)">`;
+      for (let i = 0; i < 70; i++) {
+        const e = at(r());
+        const off = -2 + Math.pow(r(), 1.6) * 14;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const color = pick(colors);
+        if (r() < 0.35) {
+          const len = 1.5 + r() * 3.5;
+          const dx = e.nx + (r() - 0.5) * 0.8;
+          const dy = e.ny + (r() - 0.5) * 0.8;
+          s += `<line x1="${f1(cx)}" y1="${f1(cy)}" x2="${f1(cx + dx * len)}" y2="${f1(cy + dy * len)}" stroke="${color}" stroke-width="${f1(0.25 + r() * 0.3)}" stroke-linecap="round"/>`;
+        } else {
+          s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(0.2 + r() * 0.55)}" fill="${color}"/>`;
+        }
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "flames": {
+      s += `<defs><filter id="w" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.5" xChannelSelector="R" yChannelSelector="G"/></filter>`;
+      const tongues: string[] = [];
+      for (let i = 0; i < 26; i++) {
+        const e = at(r());
+        const h = 4 + Math.pow(r(), 1.5) * 11;
+        const w = 2 + r() * 3.5;
+        const bx = e.x - e.nx * 1.5;
+        const by = e.y - e.ny * 1.5;
+        const sway = (r() - 0.5) * 5;
+        const tip = [bx + e.nx * h + e.tx * sway, by + e.ny * h + e.ty * sway];
+        const b1 = [bx - e.tx * w / 2, by - e.ty * w / 2];
+        const b2 = [bx + e.tx * w / 2, by + e.ty * w / 2];
+        const c1 = [b1[0] + e.nx * h * 0.55 - e.tx * w * 0.2, b1[1] + e.ny * h * 0.55 - e.ty * w * 0.2];
+        const c2 = [b2[0] + e.nx * h * 0.45 + e.tx * w * 0.3, b2[1] + e.ny * h * 0.45 + e.ty * w * 0.3];
+        s += `<linearGradient id="g${i}" gradientUnits="userSpaceOnUse" x1="${f1(bx)}" y1="${f1(by)}" x2="${f1(tip[0])}" y2="${f1(tip[1])}"><stop offset="0" stop-color="#fff4c2"/><stop offset="0.3" stop-color="${p.accent2}"/><stop offset="0.7" stop-color="${p.accent}"/><stop offset="1" stop-color="${p.accent}" stop-opacity="0"/></linearGradient>`;
+        tongues.push(`<path d="M${f1(b1[0])} ${f1(b1[1])} Q${f1(c1[0])} ${f1(c1[1])} ${f1(tip[0])} ${f1(tip[1])} Q${f1(c2[0])} ${f1(c2[1])} ${f1(b2[0])} ${f1(b2[1])} Z" fill="url(#g${i})" fill-opacity="0.9"/>`);
+      }
+      s += `</defs><g filter="url(#w)">${tongues.join("")}</g>`;
+      break;
+    }
+
+    case "frost": {
+      s += `<defs><filter id="fb"><feGaussianBlur stdDeviation="1.2"/></filter>${GLOW}</defs>`;
+      s += `<g filter="url(#fb)">`;
+      for (let i = 0; i < 26; i++) {
+        const e = at(r());
+        const off = -1 + r() * 3;
+        s += `<ellipse cx="${f1(e.x + e.nx * off)}" cy="${f1(e.y + e.ny * off)}" rx="${f1(3 + r() * 5)}" ry="${f1(1.5 + r() * 2)}" fill="white" fill-opacity="${f1(0.25 + r() * 0.3)}" transform="rotate(${f1((Math.atan2(e.ty, e.tx) * 180) / Math.PI)} ${f1(e.x + e.nx * off)} ${f1(e.y + e.ny * off)})"/>`;
+      }
+      s += `</g><g filter="url(#glow)" stroke="white" stroke-linecap="round" fill="none">`;
+      for (let i = 0; i < 18; i++) {
+        const e = at(r());
+        const off = -1 + r() * 4;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const size = 1.8 + r() * 4;
+        const rot = r() * 60;
+        for (let k = 0; k < 6; k++) {
+          const a = ((rot + k * 60) * Math.PI) / 180;
+          const ex = cx + Math.cos(a) * size;
+          const ey = cy + Math.sin(a) * size;
+          s += `<line x1="${f1(cx)}" y1="${f1(cy)}" x2="${f1(ex)}" y2="${f1(ey)}" stroke-width="0.35" stroke-opacity="0.9"/>`;
+          const mx = cx + Math.cos(a) * size * 0.55;
+          const my = cy + Math.sin(a) * size * 0.55;
+          for (const da of [-0.6, 0.6]) {
+            s += `<line x1="${f1(mx)}" y1="${f1(my)}" x2="${f1(mx + Math.cos(a + da) * size * 0.3)}" y2="${f1(my + Math.sin(a + da) * size * 0.3)}" stroke-width="0.25" stroke-opacity="0.8"/>`;
+          }
+        }
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "lightning": {
+      s += `<defs><filter id="lb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1"/></filter></defs>`;
+      const bolts: string[] = [];
+      for (let i = 0; i < 8; i++) {
+        const e = at(r());
+        const dir = r() < 0.5 ? -1 : 1;
+        let x = e.x;
+        let y = e.y;
+        const pts = [`${f1(x)},${f1(y)}`];
+        const steps = 6 + Math.floor(r() * 4);
+        for (let k = 0; k < steps; k++) {
+          const along = 2.5 + r() * 3;
+          const out = (r() - 0.25) * 3.2;
+          x += e.tx * dir * along + e.nx * out;
+          y += e.ty * dir * along + e.ny * out;
+          pts.push(`${f1(x)},${f1(y)}`);
+          if (r() < 0.25) {
+            const bl = 2 + r() * 4;
+            bolts.push(`${f1(x)},${f1(y)} ${f1(x + e.nx * bl + (r() - 0.5) * 2)},${f1(y + e.ny * bl + (r() - 0.5) * 2)}`);
+          }
+        }
+        bolts.push(pts.join(" "));
+      }
+      const draw = (stroke: string, width: number, extra = "") =>
+        bolts.map((b) => `<polyline points="${b}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>`).join("");
+      s += `<g filter="url(#lb)">${draw(p.accent2, 2.2, 'stroke-opacity="0.6"')}</g>${draw(p.accent2, 0.8)}${draw("white", 0.3)}`;
+      break;
+    }
+
+    case "glitter": {
+      const colors = ["white", "oklch(0.92 0.12 90)", "oklch(0.85 0.15 80)", p.accent2];
+      s += `<defs>${GLOW}</defs><g filter="url(#glow)">`;
+      for (let i = 0; i < 80; i++) {
+        const e = at(r());
+        const off = -2 + Math.pow(r(), 1.4) * 11;
+        const cx = e.x + e.nx * off;
+        const cy = e.y + e.ny * off;
+        const color = pick(colors);
+        const o = f1(0.6 + r() * 0.4);
+        if (r() < 0.25) {
+          const z = 0.8 + r() * 1.8;
+          const q = z * 0.22;
+          s += `<path d="M${f1(cx)} ${f1(cy - z)} L${f1(cx + q)} ${f1(cy - q)} L${f1(cx + z)} ${f1(cy)} L${f1(cx + q)} ${f1(cy + q)} L${f1(cx)} ${f1(cy + z)} L${f1(cx - q)} ${f1(cy + q)} L${f1(cx - z)} ${f1(cy)} L${f1(cx - q)} ${f1(cy - q)} Z" fill="${color}" fill-opacity="${o}"/>`;
+        } else {
+          s += `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(0.15 + r() * 0.35)}" fill="${color}" fill-opacity="${o}"/>`;
+        }
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "ink": {
+      s += `<defs><filter id="rough" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="1.6" xChannelSelector="R" yChannelSelector="G"/></filter></defs><g filter="url(#rough)" fill="none" stroke-linecap="round" stroke-linejoin="round">`;
+      for (let i = 0; i < 7; i++) {
+        const t0 = r();
+        const span = 0.05 + r() * 0.1;
+        const phase = r() * Math.PI * 2;
+        const color = r() < 0.7 ? p.accent2 : "oklch(0.15 0 0)";
+        const width = 2 + r() * 3;
+        for (const [dOff, w, o] of [[0, width, 0.85], [width * 0.45, 0.4, 0.55], [-width * 0.5, 0.3, 0.45]] as const) {
+          const pts: string[] = [];
+          for (let k = 0; k <= 12; k++) {
+            const e = at(t0 + (span * k) / 12);
+            const off = 1 + Math.sin(phase + k * 0.5) * 2.5 + dOff;
+            pts.push(`${f1(e.x + e.nx * off)},${f1(e.y + e.ny * off)}`);
+          }
+          s += `<polyline points="${pts.join(" ")}" stroke="${color}" stroke-width="${f1(w)}" stroke-opacity="${o}"/>`;
+        }
+      }
+      s += "</g>";
+      break;
+    }
+
+    case "none":
+      break;
+  }
+  return s;
+}
+
+/** The overlay as a CSS image covering the card plus OVERLAY_MARGIN on every side. */
+export function overlayImage(id: OverlayId, p: Palette, shape: ShapeId): string | null {
+  if (id === "none") return null;
+  const m = OVERLAY_MARGIN;
+  return svgUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-m} ${-m} ${100 + 2 * m} ${140 + 2 * m}" preserveAspectRatio="none">${overlayBody(id, p, shape)}</svg>`
+  );
+}
+
 // ─── Finishes (light overlays; move with the pointer on interactive cards) ────
 
 export interface FinishDef {
@@ -1254,7 +1593,7 @@ const d = (
 // Design with the extra touches of game promo cards: aura, photo treatment, name style.
 const dx = (
   base: CardDesign,
-  extra: { aura?: AuraId; photoFilter?: PhotoFilterId; nameStyle?: NameStyleId }
+  extra: { aura?: AuraId; photoFilter?: PhotoFilterId; nameStyle?: NameStyleId; overlay?: OverlayId }
 ): CardDesign => ({ ...base, ...extra });
 
 export const PRESETS: Preset[] = [
@@ -1265,20 +1604,20 @@ export const PRESETS: Preset[] = [
 
   // Herní edice — inspired by current game promo cards
   { id: "ed-totw", nameCs: "Hvězda kola", descriptionCs: "Černozlatá s dvojitou linkou", tags: ["edice", "zaklad"], requiredTier: "free", design: d("crown", "doublegold", "fc", "blackgold", "streaks", "shimmer") },
-  { id: "ed-legacy", nameCs: "Dědictví", descriptionCs: "Měděná s natrženým okrajem", tags: ["edice", "zaklad"], requiredTier: "free", design: d("torn", "paper", "fc", "copper", "smoke", "shimmer") },
-  { id: "ed-grunge", nameCs: "Grunge", descriptionCs: "Oprýskaná šedá se stříkanci", tags: ["edice", "zaklad"], requiredTier: "free", design: d("torn", "silver", "fc", "grunge", "grunge", "none") },
-  { id: "ed-icon", nameCs: "Ikona", descriptionCs: "Bílozlatá s podpisem a zlatými pásy", tags: ["edice", "legendy"], requiredTier: "premium", design: dx(d("crown", "doublegold", "fc", "icon", "ribbons", "goldglint"), { aura: "glow", photoFilter: "mono", nameStyle: "signature" }) },
+  { id: "ed-legacy", nameCs: "Dědictví", descriptionCs: "Měděná s natrženým okrajem", tags: ["edice", "zaklad"], requiredTier: "free", design: dx(d("torn", "paper", "fc", "copper", "smoke", "shimmer"), { overlay: "ink" }) },
+  { id: "ed-grunge", nameCs: "Grunge", descriptionCs: "Oprýskaná šedá se stříkanci", tags: ["edice", "zaklad"], requiredTier: "free", design: dx(d("torn", "silver", "fc", "grunge", "grunge", "none"), { overlay: "splatter" }) },
+  { id: "ed-icon", nameCs: "Ikona", descriptionCs: "Bílozlatá s podpisem a zlatými pásy", tags: ["edice", "legendy"], requiredTier: "premium", design: dx(d("crown", "doublegold", "fc", "icon", "ribbons", "goldglint"), { aura: "glow", photoFilter: "mono", nameStyle: "signature", overlay: "glitter" }) },
   { id: "ed-icon-marble", nameCs: "Mramorová ikona", descriptionCs: "Mramor se zlatými žilkami a podpisem", tags: ["edice", "legendy"], requiredTier: "premium", design: dx(d("fut", "doublegold", "fc", "icon", "marble", "goldglint"), { photoFilter: "mono", nameStyle: "signature" }) },
   { id: "ed-future", nameCs: "Budoucí hvězdy", descriptionCs: "Fialový vesmír s krystalem", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "doublesilver", "fc", "futurestars", "crystal", "refractor"), { aura: "glow" }) },
-  { id: "ed-scream", nameCs: "Ultimate Scream", descriptionCs: "Plameny a fialový kouř kolem", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "rosegold", "fc", "scream", "flames", "gloss"), { aura: "fire" }) },
-  { id: "ed-ghost", nameCs: "Přízrak", descriptionCs: "Zelený přízračný oheň", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "neonline", "fc", "ghost", "flames", "refractor"), { aura: "smoke" }) },
-  { id: "ed-flashback", nameCs: "Flashback", descriptionCs: "Neonové linky a neonový výbuch", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "neonline", "fc", "flashback", "neonburst", "none"), { aura: "glow" }) },
+  { id: "ed-scream", nameCs: "Ultimate Scream", descriptionCs: "Plameny a fialový kouř kolem", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "rosegold", "fc", "scream", "flames", "gloss"), { aura: "fire", overlay: "smoke" }) },
+  { id: "ed-ghost", nameCs: "Přízrak", descriptionCs: "Zelený přízračný oheň", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "neonline", "fc", "ghost", "flames", "refractor"), { aura: "smoke", overlay: "smoke" }) },
+  { id: "ed-flashback", nameCs: "Flashback", descriptionCs: "Neonové linky a neonový výbuch", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "neonline", "fc", "flashback", "neonburst", "none"), { aura: "glow", overlay: "lightning" }) },
   { id: "ed-hero", nameCs: "Hrdina", descriptionCs: "Holografické vlny a zlaté písmo", tags: ["edice"], requiredTier: "premium", design: dx(d("crown", "doublesilver", "fc", "hero", "swirl", "refractor"), { aura: "glow" }) },
-  { id: "ed-trailblazer", nameCs: "Průkopník", descriptionCs: "Tyrkys s oranžovou explozí", tags: ["edice"], requiredTier: "premium", design: d("torn", "gold", "fc", "trailblazer", "explosion", "refractor") },
+  { id: "ed-trailblazer", nameCs: "Průkopník", descriptionCs: "Tyrkys s oranžovou explozí", tags: ["edice"], requiredTier: "premium", design: dx(d("torn", "gold", "fc", "trailblazer", "explosion", "refractor"), { overlay: "shards" }) },
   { id: "ed-champion", nameCs: "Fialový šampion", descriptionCs: "Stříbrné sloupky a ametyst", tags: ["edice"], requiredTier: "premium", design: d("pillar", "doublesilver", "fc", "amethyst", "crystal", "shimmer") },
   { id: "ed-highlights", nameCs: "Zajímaví hráči", descriptionCs: "Duhový okraj a světelné čáry", tags: ["edice"], requiredTier: "premium", design: dx(d("fut", "chrome", "fc", "aqua", "streaks", "refractor"), { aura: "glow" }) },
   { id: "ed-cosmic", nameCs: "Vesmírná", descriptionCs: "Mlhovina, hvězdy a neon", tags: ["edice"], requiredTier: "premium", design: d("crown", "neonline", "fc", "futurestars", "cosmos", "shimmer") },
-  { id: "ed-blaze", nameCs: "Plamenný", descriptionCs: "Ohnivá karta v kouři", tags: ["edice"], requiredTier: "premium", design: dx(d("fut", "rosegold", "fc", "scream", "flames", "shimmer"), { aura: "smoke", photoFilter: "warm" }) },
+  { id: "ed-blaze", nameCs: "Plamenný", descriptionCs: "Ohnivá karta v kouři", tags: ["edice"], requiredTier: "premium", design: dx(d("fut", "rosegold", "fc", "scream", "flames", "shimmer"), { aura: "smoke", photoFilter: "warm", overlay: "flames" }) },
   { id: "totw", nameCs: "Černé zlato", descriptionCs: "Černozlatá karta za skvělý výkon", tags: ["zaklad", "specialy"], requiredTier: "free", design: d("elite", "gold", "pro", "blackgold", "facets", "shimmer") },
   { id: "chrome-base", nameCs: "Chrome", descriptionCs: "Lesklá chromová karta", tags: ["zaklad", "chrome"], requiredTier: "free", design: d("classic", "silver", "classic", "platinum", "clean", "refractor") },
   { id: "club", nameCs: "Klubovka", descriptionCs: "V barvách týmu", tags: ["zaklad"], requiredTier: "free", design: d("bevel", "team", "sidebar", "royal", "mesh", "gloss") },
@@ -1296,19 +1635,19 @@ export const PRESETS: Preset[] = [
   { id: "orn-laurel", nameCs: "Vítěz", descriptionCs: "Zlaté vavříny a hvězda", tags: ["ozdobne", "zaklad"], requiredTier: "free", design: d("fut", "laurel", "fc", "gold", "beams", "goldglint") },
   { id: "orn-pillars", nameCs: "Zlaté sloupky", descriptionCs: "Dvojitá linka se sloupky po stranách", tags: ["ozdobne"], requiredTier: "premium", design: d("crown", "pillars", "fc", "blackgold", "streaks", "shimmer") },
   { id: "orn-pearl", nameCs: "Perleťová", descriptionCs: "Perleťový rám s duhovou září", tags: ["ozdobne", "legendy"], requiredTier: "premium", design: dx(d("crown", "pearl", "fc", "icon", "mesh", "refractor"), { aura: "glow" }) },
-  { id: "orn-chipped", nameCs: "Oprýskaná", descriptionCs: "Barva odlupující se z kovu", tags: ["ozdobne"], requiredTier: "premium", design: d("bevel", "chipped", "fc", "copper", "grunge", "none") },
+  { id: "orn-chipped", nameCs: "Oprýskaná", descriptionCs: "Barva odlupující se z kovu", tags: ["ozdobne"], requiredTier: "premium", design: dx(d("bevel", "chipped", "fc", "copper", "grunge", "none"), { overlay: "splatter" }) },
   { id: "orn-diamond", nameCs: "Diamant", descriptionCs: "Broušený rám jako drahokam", tags: ["ozdobne"], requiredTier: "premium", design: d("bevel", "diamond", "pro", "frost", "crystal", "refractor") },
   { id: "orn-dragon", nameCs: "Drak", descriptionCs: "Rám z dračích šupin", tags: ["ozdobne"], requiredTier: "premium", design: dx(d("shard", "scales", "pro", "emerald", "smoke", "shimmer"), { aura: "smoke" }) },
   { id: "orn-rope", nameCs: "Kroucená", descriptionCs: "Kroucené zlato na modré", tags: ["ozdobne"], requiredTier: "premium", design: d("classic", "rope", "classic", "royal", "beams", "gloss") },
-  { id: "orn-magma",nameCs: "Magma", descriptionCs: "Rám z žhnoucí lávy", tags: ["ozdobne"], requiredTier: "premium", design: dx(d("elite", "magma", "pro", "inferno", "smoke", "shimmer"), { aura: "fire" }) },
+  { id: "orn-magma",nameCs: "Magma", descriptionCs: "Rám z žhnoucí lávy", tags: ["ozdobne"], requiredTier: "premium", design: dx(d("elite", "magma", "pro", "inferno", "smoke", "shimmer"), { aura: "fire", overlay: "sparks" }) },
 
   // Speciály — promo-style cards
   { id: "icon", nameCs: "Ikona", descriptionCs: "Bílozlatá karta legend", tags: ["specialy", "legendy"], requiredTier: "premium", design: d("elite", "gold", "pro", "icon", "beams", "goldglint") },
   { id: "toty", nameCs: "Rok hvězd", descriptionCs: "Tmavě modrá se zlatem", tags: ["specialy"], requiredTier: "premium", design: d("elite", "gold", "pro", "royal", "beams", "goldglint") },
   { id: "tots", nameCs: "Fialová hvězda", descriptionCs: "Karta sezóny", tags: ["specialy"], requiredTier: "premium", design: d("elite", "gold", "pro", "purple", "facets", "shimmer") },
   { id: "stadium-lights", nameCs: "Stadium Lights", descriptionCs: "Pod reflektory", tags: ["specialy"], requiredTier: "premium", design: d("classic", "silver", "fullbleed", "royal", "beams", "gloss") },
-  { id: "black-fire", nameCs: "Black Fire", descriptionCs: "Temná karta se žhnoucím okrajem", tags: ["specialy"], requiredTier: "premium", design: d("shard", "black", "fullbleed", "inferno", "smoke", "shimmer") },
-  { id: "electrix", nameCs: "ElectriX", descriptionCs: "Elektrický neon", tags: ["specialy"], requiredTier: "premium", design: d("shard", "neon", "pro", "electric", "mesh", "refractor") },
+  { id: "black-fire", nameCs: "Black Fire", descriptionCs: "Temná karta se žhnoucím okrajem", tags: ["specialy"], requiredTier: "premium", design: dx(d("shard", "black", "fullbleed", "inferno", "smoke", "shimmer"), { overlay: "sparks" }) },
+  { id: "electrix", nameCs: "ElectriX", descriptionCs: "Elektrický neon", tags: ["specialy"], requiredTier: "premium", design: dx(d("shard", "neon", "pro", "electric", "mesh", "refractor"), { overlay: "lightning" }) },
   { id: "toxic", nameCs: "Toxic", descriptionCs: "Jedovatě zelený neon s velkým číslem", tags: ["specialy"], requiredTier: "premium", design: d("bevel", "neon", "pro", "toxic", "number", "gloss") },
   { id: "sunset", nameCs: "Západ slunce", descriptionCs: "Teplý gradient", tags: ["specialy"], requiredTier: "premium", design: d("classic", "rosegold", "fullbleed", "sunset", "mesh", "shimmer") },
   { id: "popout-window", nameCs: "Breakout", descriptionCs: "Hráč vystupuje z rámečku", tags: ["specialy"], requiredTier: "premium", design: d("classic", "chrome", "sticker", "electric", "number", "refractor", true) },
@@ -1323,7 +1662,7 @@ export const PRESETS: Preset[] = [
   // Legendy — the rarest looks
   { id: "superfractor", nameCs: "Superfractor 1/1", descriptionCs: "Zlatý vír, jediná svého druhu", tags: ["legendy", "chrome"], requiredTier: "premium", design: d("elite", "gold", "pro", "blackgold", "spiral", "goldglint") },
   { id: "inferno-legend", nameCs: "Inferno", descriptionCs: "Legenda v plamenech", tags: ["legendy"], requiredTier: "premium", design: d("elite", "black", "pro", "inferno", "lava", "goldglint") },
-  { id: "frozen-legend", nameCs: "Frozen", descriptionCs: "Ledová legenda", tags: ["legendy"], requiredTier: "premium", design: d("bevel", "ice", "pro", "frost", "beams", "refractor") },
+  { id: "frozen-legend", nameCs: "Frozen", descriptionCs: "Ledová legenda", tags: ["legendy"], requiredTier: "premium", design: dx(d("bevel", "ice", "pro", "frost", "beams", "refractor"), { overlay: "frost" }) },
   { id: "rose-legend", nameCs: "Rose Gold", descriptionCs: "Elegantní prémiová karta", tags: ["legendy"], requiredTier: "premium", design: d("elite", "rosegold", "pro", "ruby", "spiral", "shimmer") },
 ];
 
@@ -1383,7 +1722,8 @@ function normalizeDesign(design: CardDesign): CardDesign {
   const aura = design.aura && AURAS[design.aura] ? design.aura : undefined;
   const photoFilter = design.photoFilter && PHOTO_FILTERS[design.photoFilter] ? design.photoFilter : undefined;
   const nameStyle = design.nameStyle && NAME_STYLES[design.nameStyle] ? design.nameStyle : undefined;
-  return { ...design, shape, frame, pattern, finish, palette, layout, aura, photoFilter, nameStyle };
+  const overlay = design.overlay && OVERLAYS[design.overlay] ? design.overlay : undefined;
+  return { ...design, shape, frame, pattern, finish, palette, layout, aura, photoFilter, nameStyle, overlay };
 }
 
 // Cards created before the design system carry a template category or a seeded template id.

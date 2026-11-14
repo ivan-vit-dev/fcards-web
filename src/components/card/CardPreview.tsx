@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { useMemo, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { cn, getRarityColor } from "@/lib/utils";
 import {
   FINISHES,
   FRAMES,
   GRAIN,
+  OVERLAY_MARGIN,
   PATTERNS,
+  overlayImage,
   PHOTO_FILTERS,
   SHAPES,
   frameBackground,
@@ -140,6 +142,8 @@ export function CardPreview({
   const glow = frame.glow ? 75 : card.rarity === "legendary" || card.rarity === "mythic" ? 50 : 24;
   const glowBlur = frame.glow ? 0.07 : 0.05;
   const aura = design.aura && design.aura !== "none" && !flat ? design.aura : null;
+  const overlayId = design.overlay ?? "none";
+  const overlayUrl = useMemo(() => overlayImage(overlayId, p, design.shape), [overlayId, p, design.shape]);
 
   const badges = resolveBadges(card.badges, design.layout);
   const name = player?.displayName ?? card.playerName ?? "Hráč";
@@ -216,6 +220,9 @@ export function CardPreview({
         width: dims.w,
         height: dims.h,
         fontSize: dims.font,
+        // Room for the overlay that spills past the outline, so parents (scroll areas, the PNG
+        // export wrapper) don't cut it off. Not in print (flat): there it is clipped to the card.
+        margin: overlayUrl && !flat ? (dims.w * OVERLAY_MARGIN) / 100 : undefined,
         transform: interactive ? "perspective(900px) rotateY(var(--rx)) rotateX(var(--ry))" : undefined,
         touchAction: interactive ? "pan-y" : undefined,
         filter: flat
@@ -332,9 +339,35 @@ export function CardPreview({
       )}
       {frame.crest && <FrameCrest crest={frame.crest} p={p} band={thickness} top={shapeEdgeAt(design.shape, 50).top} />}
       {frame.sideBars && !flat && <SideBars background={frame.sideBars(p)} band={dims.w * 0.02} />}
+
+      {/* Decoration over the frame, spilling past the outline; clipped to the card for print */}
+      {overlayUrl && (
+        <div
+          className="absolute pointer-events-none"
+          style={
+            flat
+              ? {
+                  inset: 0,
+                  clipPath,
+                  borderRadius: radius,
+                  background: `${overlayUrl} center / ${OVERLAY_W}% ${OVERLAY_H}% no-repeat`,
+                }
+              : {
+                  left: `${-OVERLAY_MARGIN}%`,
+                  top: `${(-OVERLAY_MARGIN / 140) * 100}%`,
+                  width: `${OVERLAY_W}%`,
+                  height: `${OVERLAY_H}%`,
+                  background: `${overlayUrl} center / 100% 100% no-repeat`,
+                }
+          }
+        />
+      )}
     </div>
   );
 }
+
+const OVERLAY_W = 100 + 2 * OVERLAY_MARGIN; // % of card width
+const OVERLAY_H = ((140 + 2 * OVERLAY_MARGIN) / 140) * 100; // % of card height
 
 // Metal bars standing out of both sides, like pilasters (screen and PNG only).
 function SideBars({ background, band }: { background: string; band: number }) {

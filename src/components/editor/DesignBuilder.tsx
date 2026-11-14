@@ -10,6 +10,8 @@ import {
   FRAMES,
   LAYOUTS,
   NAME_STYLES,
+  OVERLAYS,
+  OVERLAY_MARGIN,
   PALETTES,
   PATTERNS,
   PHOTO_FILTERS,
@@ -18,6 +20,8 @@ import {
   type NameStyleId,
   type PhotoFilterId,
   frameBackground,
+  overlayImage,
+  type OverlayId,
   paletteFromColors,
   resolvePalette,
   shapeClipPath,
@@ -226,6 +230,46 @@ export function DesignBuilder({ card, player, design, locked, locale, onChange }
               </div>
             </Option>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Ozdoby přes rám"
+        hint="Kouř, stříkance, úlomky nebo jiskry položené přes rám, které přesahují okraj kartičky. V tisku se ořežou podle obrysu."
+      >
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+          {(Object.keys(OVERLAYS) as OverlayId[]).map((id) => {
+            const img = overlayImage(id, palette, design.shape);
+            return (
+              <Option
+                key={id}
+                active={(design.overlay ?? "none") === id}
+                label={OVERLAYS[id].nameCs}
+                title={OVERLAYS[id].descriptionCs}
+                onClick={() => onChange({ overlay: id })}
+              >
+                <div className="relative my-1.5 h-[56px] w-10">
+                  <div
+                    className="absolute inset-0 rounded-[3px]"
+                    style={{ background: frameBackground(design.frame, palette) }}
+                  />
+                  <div className="absolute inset-[3px] rounded-[2px]" style={{ background: PATTERNS[design.pattern].css(palette) }} />
+                  {img && (
+                    <div
+                      className="absolute"
+                      style={{
+                        left: `${-OVERLAY_MARGIN}%`,
+                        top: `${(-OVERLAY_MARGIN / 140) * 100}%`,
+                        width: `${100 + 2 * OVERLAY_MARGIN}%`,
+                        height: `${((140 + 2 * OVERLAY_MARGIN) / 140) * 100}%`,
+                        background: `${img} center / 100% 100% no-repeat`,
+                      }}
+                    />
+                  )}
+                </div>
+              </Option>
+            );
+          })}
         </div>
       </Section>
 

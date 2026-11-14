@@ -399,7 +399,10 @@ function StudioContent() {
       <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
         {/* Live card + photo history */}
         <div className="lg:sticky lg:top-4 shrink-0 w-full max-w-[280px] space-y-4">
-          <CardPreview card={card} player={player} size="lg" interactive />
+          {/* Centred: a card with an overlay reserves extra room around itself */}
+          <div className="flex justify-center">
+            <CardPreview card={card} player={player} size="lg" interactive />
+          </div>
 
           {/* AI steps change this card directly — a copy keeps the original untouched. */}
           <Button
