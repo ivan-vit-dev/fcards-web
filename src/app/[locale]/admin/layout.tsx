@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, useParams, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, Layers, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, Layers, ArrowLeft, ShieldAlert } from "lucide-react";
 
 const adminNav = [
   { href: "/admin", label: "Přehled", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Uživatelé", icon: Users, exact: false },
+  { href: "/admin/moderation", label: "Moderování", icon: ShieldAlert, exact: false },
   { href: "/admin/templates", label: "Šablony", icon: Layers, exact: false },
 ];
 

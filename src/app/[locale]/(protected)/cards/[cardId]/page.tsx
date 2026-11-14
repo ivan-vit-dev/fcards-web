@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ModerationNotice } from "@/components/moderation/ModerationNotice";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -349,8 +350,14 @@ export default function CardDetailPage() {
                   : "Vypnuto — kartičku vidíte jen vy. Zapněte pro sdílení odkazem."}
               </p>
             </div>
-            <Switch id="card-public" checked={card.isPublic} onCheckedChange={() => handleTogglePublic()} />
+            <Switch
+              id="card-public"
+              checked={card.isPublic}
+              disabled={card.moderation?.hidden}
+              onCheckedChange={() => handleTogglePublic()}
+            />
           </div>
+          {card.moderation?.hidden && <ModerationNotice what="Kartičku" reason={card.moderation.reason} />}
           <AlertDialog open={publishOpen} onOpenChange={setPublishOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>

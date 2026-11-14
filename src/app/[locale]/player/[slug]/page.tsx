@@ -23,6 +23,7 @@ import {
 } from "@/lib/firebaseServices";
 import { getLevelTier } from "@/lib/utils";
 import { LevelBadge } from "@/components/achievements/LevelBadge";
+import { ReportButton } from "@/components/moderation/ReportButton";
 import type { Player, PlayerPosition, Card, Achievement } from "@/types";
 
 const positionLabels: Record<PlayerPosition, string> = {
@@ -218,13 +219,17 @@ export default function PublicPlayerPage() {
             )}
 
             {/* Branding footer */}
-            <div className="text-center pt-4">
+            <div className="text-center pt-4 space-y-2">
               <p className="text-xs text-muted-foreground">
                 Vytvořeno pomocí{" "}
                 <Link href={`/${locale}`} className="text-primary hover:underline font-medium">
                   Fotbalové Kartičky
                 </Link>
               </p>
+              <ReportButton
+                what="profil"
+                target={{ targetType: "player", targetId: player.id, ownerId: player.userId }}
+              />
             </div>
           </div>
         )}

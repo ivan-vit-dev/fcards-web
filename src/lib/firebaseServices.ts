@@ -25,6 +25,9 @@ import { generateSlug } from "./utils";
 import { SEED_ACHIEVEMENTS, SEED_TEMPLATES } from "./seedData";
 import type {
   AgeConfirmation,
+  ContentReport,
+  ReportReason,
+  ReportTargetType,
   User,
   Player,
   CareerStats,
@@ -110,6 +113,42 @@ export async function exportMyData(uid: string): Promise<Record<string, unknown>
     getClubsByOwner(uid),
   ]);
   return { exportedAt: new Date().toISOString(), user, players, cards, teams, clubs, achievements };
+}
+
+// ─── Moderation ─────────────────────────────────────────────────────────────
+
+export interface ReportTargetRef {
+  targetType: ReportTargetType;
+  targetId: string;
+  ownerId: string;
+}
+
+/** Works for guests too (Cloud Function). */
+export async function reportContent(target: ReportTargetRef, reason: ReportReason, note: string): Promise<void> {
+  await httpsCallable(functions, "reportContent")({ ...target, reason, note });
+}
+
+/** Super admin only. */
+export async function moderateContent(
+  target: ReportTargetRef,
+  action: "hide" | "restore" | "dismiss",
+  reason?: ReportReason
+): Promise<void> {
+  await httpsCallable(functions, "moderateContent")({ ...target, action, reason });
+}
+
+export async function getModerationQueue(): Promise<ContentReport[]> {
+  const snap = await getDocs(
+    query(collection(db, "reports"), where("status", "in", ["open", "hidden"]), limit(200))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ContentReport);
+}
+
+export async function getRecentPublicCards(count = 30): Promise<Card[]> {
+  const snap = await getDocs(
+    query(collection(db, "cards"), where("isPublic", "==", true), orderBy("createdAt", "desc"), limit(count))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Card);
 }
 
 /** Server-side: deletes all of the user's data, files and the login itself. */

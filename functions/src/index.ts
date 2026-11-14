@@ -6,6 +6,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import Replicate from "replicate";
 import sharp from "sharp";
+import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 
 admin.initializeApp();
@@ -569,6 +570,164 @@ export const syncProgress = onCall(async (request) => {
   });
 });
 
+// ─── Moderation ──────────────────────────────────────────────────────────────
+// Anyone (guests too) can report a public card or player profile. Reports aggregate into one
+// doc per target; after AUTO_HIDE_AT distinct reporters the content is hidden until a
+// superAdmin reviews it. Hidden content carries `moderation.hidden`, which Firestore rules
+// stop the owner from undoing. Keep reasons/threshold in sync with src/lib/moderation.ts.
+
+const REPORT_REASONS = ["inappropriate", "noConsent", "bullying", "other"] as const;
+type ReportReason = (typeof REPORT_REASONS)[number];
+const AUTO_HIDE_AT = 3;
+
+interface ReportTarget {
+  ref: admin.firestore.DocumentReference;
+  reportId: string;
+  ownerId: string;
+  title: string;
+  link: string;
+}
+
+async function resolveTarget(type: unknown, id: unknown, ownerId: unknown): Promise<ReportTarget> {
+  const targetId = requireString(id, "targetId");
+  if (type === "card") {
+    const ref = db.doc(`cards/${targetId}`);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Content not found.");
+    const owner = snap.get("userId") as string;
+    return {
+      ref,
+      reportId: `card_${owner}_${targetId}`,
+      ownerId: owner,
+      title: (snap.get("playerName") as string | undefined) ?? "Kartička",
+      link: `/card/${snap.get("shareSlug")}`,
+    };
+  }
+  if (type === "player") {
+    const owner = requireString(ownerId, "ownerId");
+    const ref = db.doc(`users/${owner}/players/${targetId}`);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Content not found.");
+    return {
+      ref,
+      reportId: `player_${owner}_${targetId}`,
+      ownerId: owner,
+      title: (snap.get("displayName") as string | undefined) ?? "Hráč",
+      link: `/player/${snap.get("slug")}`,
+    };
+  }
+  throw new HttpsError("invalid-argument", "Unknown target type.");
+}
+
+// Signed-in reporters count once per uid; guests once per (hashed) IP address.
+function reporterKey(request: CallableRequest): string {
+  if (request.auth?.uid) return `u:${request.auth.uid}`;
+  const forwarded = request.rawRequest.headers["x-forwarded-for"];
+  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(",")[0].trim() ?? request.rawRequest.ip ?? "";
+  return `ip:${createHash("sha256").update(`fcards-report:${ip}`).digest("hex").slice(0, 24)}`;
+}
+
+export const reportContent = onCall(async (request) => {
+  const reason = request.data?.reason as ReportReason;
+  if (!REPORT_REASONS.includes(reason)) throw new HttpsError("invalid-argument", "Unknown reason.");
+  const note = typeof request.data?.note === "string" ? request.data.note.trim().slice(0, 500) : "";
+  const target = await resolveTarget(request.data?.targetType, request.data?.targetId, request.data?.ownerId);
+  if (!(await target.ref.get()).get("isPublic")) throw new HttpsError("not-found", "Content not found.");
+
+  const key = reporterKey(request);
+  const reportRef = db.doc(`reports/${target.reportId}`);
+  const keyRef = reportRef.collection("reporters").doc(key);
+
+  const hidden = await db.runTransaction(async (tx) => {
+    const [reportSnap, keySnap, targetSnap] = await Promise.all([tx.get(reportRef), tx.get(keyRef), tx.get(target.ref)]);
+    if (keySnap.exists) return false; // already reported by this person — silently accept
+    const report = reportSnap.data() ?? {};
+    // A dismissed report reopens when new people report it.
+    const reopened = report.status === "dismissed";
+    const count = (reopened ? 0 : (report.count ?? 0)) + 1;
+    const autoHide = count >= AUTO_HIDE_AT && !targetSnap.get("moderation.hidden");
+    const notes: string[] = [...(report.notes ?? []), ...(note ? [note] : [])].slice(-10);
+
+    tx.set(keyRef, { reason, createdAt: FieldValue.serverTimestamp() });
+    tx.set(
+      reportRef,
+      {
+        targetType: request.data.targetType,
+        targetId: target.ref.id,
+        ownerId: target.ownerId,
+        title: target.title,
+        link: target.link,
+        status: autoHide || report.status === "hidden" ? "hidden" : "open",
+        count,
+        reasons: reopened ? { [reason]: 1 } : { ...(report.reasons ?? {}), [reason]: (report.reasons?.[reason] ?? 0) + 1 },
+        notes,
+        ...(reportSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    if (autoHide) {
+      tx.update(target.ref, {
+        isPublic: false,
+        moderation: { hidden: true, by: "auto", reason, at: FieldValue.serverTimestamp() },
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    return autoHide;
+  });
+  if (hidden) console.log("reportContent: auto-hidden", target.reportId);
+  return { ok: true };
+});
+
+async function requireSuperAdmin(request: CallableRequest): Promise<string> {
+  const uid = requireAuth(request);
+  const role = (await db.doc(`users/${uid}`).get()).get("role");
+  if (role !== "superAdmin") throw new HttpsError("permission-denied", "Super admin only.");
+  return uid;
+}
+
+// action: "hide" (also for content nobody reported), "restore" (unhide + public again),
+// "dismiss" (reports were unfounded; content stays as it is).
+export const moderateContent = onCall(async (request) => {
+  await requireSuperAdmin(request);
+  const action = request.data?.action;
+  if (!["hide", "restore", "dismiss"].includes(action)) throw new HttpsError("invalid-argument", "Unknown action.");
+  const reason = REPORT_REASONS.includes(request.data?.reason) ? (request.data.reason as ReportReason) : "inappropriate";
+  const target = await resolveTarget(request.data?.targetType, request.data?.targetId, request.data?.ownerId);
+  const reportRef = db.doc(`reports/${target.reportId}`);
+
+  if (action === "hide") {
+    await target.ref.update({
+      isPublic: false,
+      moderation: { hidden: true, by: "admin", reason, at: FieldValue.serverTimestamp() },
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } else if (action === "restore") {
+    await target.ref.update({
+      isPublic: true,
+      moderation: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  await reportRef.set(
+    {
+      targetType: request.data.targetType,
+      targetId: target.ref.id,
+      ownerId: target.ownerId,
+      title: target.title,
+      link: target.link,
+      // "removed" = decided by an admin; "hidden" (auto-hide) still waits for review.
+      status: action === "hide" ? "removed" : "dismissed",
+      // Restored/dismissed: start counting afresh; reporters stay recorded so they can't re-flag.
+      ...(action === "hide" ? {} : { count: 0, reasons: FieldValue.delete() }),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  return { ok: true };
+});
+
 // ─── deleteAccount (GDPR right to erasure) ───────────────────────────────────
 // Deletes everything the account owns, then the Firebase Auth login. Runs in an order that
 // can simply be retried: the login goes last, so a failure halfway leaves the user signed in.
@@ -585,6 +744,7 @@ export const deleteAccount = onCall({ timeoutSeconds: 540, memory: "512MiB" }, a
   // Cards: each delete fires onCardDeleted, which removes the card's images.
   await deleteQuery(db.collection("cards").where("userId", "==", uid));
   await deleteQuery(db.collection("collections").where("userId", "==", uid));
+  await deleteQuery(db.collection("reports").where("ownerId", "==", uid));
 
   // Teams the user coaches, with their matches and match stats.
   const teams = await db.collection("teams").where("coachId", "==", uid).get();

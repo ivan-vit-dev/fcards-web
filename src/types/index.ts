@@ -119,6 +119,7 @@ export interface Player {
   isPublic: boolean;
   careerStats: CareerStats;
   progress?: { level: number; achievementIds: string[] }; // mirrored by syncProgress
+  moderation?: ModerationInfo; // written only by Cloud Functions
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -226,6 +227,36 @@ export interface Card {
   matchId?: string;
   shareCount: number;
   printCount: number;
+  moderation?: ModerationInfo; // written only by Cloud Functions
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// ─── Moderation ───────────────────────────────────────────────────────────────
+
+export type ReportReason = "inappropriate" | "noConsent" | "bullying" | "other";
+export type ReportTargetType = "card" | "player";
+
+/** Set on a card/player hidden by moderation: it can't be made public again by the owner. */
+export interface ModerationInfo {
+  hidden: boolean;
+  by: "auto" | "admin";
+  reason?: ReportReason;
+  at: Timestamp;
+}
+
+/** One doc per reported card/player (`reports/{type}_{ownerId}_{id}`), written by Cloud Functions. */
+export interface ContentReport {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  ownerId: string;
+  title: string; // player name at report time
+  link: string; // public path, e.g. /card/abc123
+  status: "open" | "hidden" | "removed" | "dismissed"; // hidden = auto-hidden, awaiting review
+  count: number; // distinct reporters since the last decision
+  reasons: Partial<Record<ReportReason, number>>;
+  notes: string[]; // latest reporter notes (max 10)
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

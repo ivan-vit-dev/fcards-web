@@ -137,6 +137,7 @@ templates/{templateId}/preview.png    — template preview
 - AI jobs need `consents.aiPhotosAt`: the client asks via `AIConsentDialog`, `startJob` in Cloud Functions refuses with `permission-denied` without it. New AI third parties go in `AI_PROCESSORS` (shown in the dialog and the privacy policy).
 - Making a card public asks for confirmation; Firebase Analytics starts only after cookie opt-in (`CookieConsent`, `enableAnalytics`).
 - `deleteAccount` callable erases all user data, files and the Auth login; Settings → Soukromí a účet also offers a JSON data export.
+- Moderation: public card/player pages have `ReportButton` → `reportContent` callable (guests allowed; one doc per target in `reports/`, reporters deduped by uid or hashed IP). At `AUTO_HIDE_AT` (3) distinct reporters the content is hidden (`isPublic: false`, `moderation.hidden`) until a superAdmin decides in `/admin/moderation` (`moderateContent`: hide / restore / dismiss). Rules block owners from editing `moderation` or re-publishing hidden content.
 - Legal pages `/[locale]/legal/privacy|terms` are drafts: fill `OPERATOR` and every `[DOPLNIT]`, and have a lawyer review them before launch.
 
 ### Monetization gating

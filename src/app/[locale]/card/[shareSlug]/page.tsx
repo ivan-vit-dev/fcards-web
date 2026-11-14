@@ -11,6 +11,7 @@ import { CardPreview } from "@/components/card/CardPreview";
 import { RarityBadge } from "@/components/card/RarityBadge";
 import { ShareButtons } from "@/components/share/ShareButtons";
 import { QRCodePanel } from "@/components/share/QRCodePanel";
+import { ReportButton } from "@/components/moderation/ReportButton";
 import { getPublicCardBySlug, getPublicPlayerDoc } from "@/lib/firebaseServices";
 import { getCardShareUrl } from "@/lib/shareUtils";
 import { CARD_TYPE_LABELS } from "@/lib/cardEngine";
@@ -149,13 +150,17 @@ export default function PublicCardPage() {
             </div>
 
             {/* Branding */}
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <p className="text-xs text-muted-foreground">
                 Vytvořeno pomocí{" "}
                 <Link href={`/${locale}`} className="text-primary hover:underline font-medium">
                   Fotbalové Kartičky
                 </Link>
               </p>
+              <ReportButton
+                what="kartičku"
+                target={{ targetType: "card", targetId: card.id, ownerId: card.userId }}
+              />
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ModerationNotice } from "@/components/moderation/ModerationNotice";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -278,10 +279,16 @@ export function PlayerForm({ userId, player, onSubmit, onPhotoUpload }: PlayerFo
                   než 15 let, zveřejnění musí schválit rodič nebo zákonný zástupce.
                 </p>
               </div>
-              <Switch id="isPublic" checked={field.value} onCheckedChange={field.onChange} />
+              <Switch
+                id="isPublic"
+                checked={field.value}
+                disabled={player?.moderation?.hidden}
+                onCheckedChange={field.onChange}
+              />
             </div>
           )}
         />
+        {player?.moderation?.hidden && <ModerationNotice what="Profil" reason={player.moderation.reason} />}
       </div>
 
       <RequiredNote />

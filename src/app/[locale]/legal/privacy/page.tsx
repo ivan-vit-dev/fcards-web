@@ -42,6 +42,11 @@ export default function PrivacyPage() {
           <strong>Týmy a kluby:</strong> název, logo, barvy, zápasy a soupiska.
         </li>
         <li>
+          <strong>Nahlášení obsahu:</strong> důvod a poznámka; abychom zabránili opakovanému nahlašování,
+          ukládáme u přihlášených identifikátor účtu, u nepřihlášených jen nevratný otisk (hash) IP adresy.
+          Vlastník obsahu se nedozví, kdo jej nahlásil.
+        </li>
+        <li>
           <strong>Technické údaje:</strong> token pro push notifikace (pokud je povolíte) a – jen s vaším
           souhlasem – analytické údaje o používání aplikace.
         </li>
@@ -59,7 +64,7 @@ export default function PrivacyPage() {
           odvolat; zpracování před odvoláním tím nepřestává být zákonné.
         </li>
         <li>
-          <strong>Bezpečnost a ochrana před zneužitím</strong> – oprávněný zájem, čl. 6 odst. 1 písm. f) GDPR.
+          <strong>Bezpečnost, moderování veřejného obsahu a ochrana před zneužitím</strong> – oprávněný zájem, čl. 6 odst. 1 písm. f) GDPR.
         </li>
       </ul>
 

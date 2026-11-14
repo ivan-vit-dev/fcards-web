@@ -23,6 +23,14 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/teams/$(teamId)).data.coachId == request.auth.uid;
     }
 
+    // Moderation (Cloud Functions only): owners can't touch `moderation` and can't make
+    // content public again while a moderator keeps it hidden.
+    function respectsModeration() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['moderation'])
+        && !(resource.data.get('moderation', {}).get('hidden', false) == true
+             && request.resource.data.get('isPublic', false) == true);
+    }
+
     // ─── Users ────────────────────────────────────────────────────────────────
 
     // role and subscriptionTier are privileged: users start as free players and
@@ -48,8 +56,8 @@ service cloud.firestore {
 
     match /users/{uid}/players/{playerId} {
       allow read:   if isUser(uid) || resource.data.isPublic == true || isSuperAdmin();
-      allow create: if isUser(uid);
-      allow update: if isUser(uid);
+      allow create: if isUser(uid) && !('moderation' in request.resource.data);
+      allow update: if isUser(uid) && respectsModeration();
       allow delete: if isUser(uid);
     }
 
@@ -99,16 +107,28 @@ service cloud.firestore {
         || (isSignedIn() && resource.data.userId == request.auth.uid)
         || isSuperAdmin();
 
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid
+        && !('moderation' in request.resource.data);
 
-      // Owner gets full update; any signed-in user may increment shareCount on public cards
-      allow update: if (isSignedIn() && resource.data.userId == request.auth.uid)
+      // Owner gets full update (except moderation); any signed-in user may increment shareCount on public cards
+      allow update: if (isSignedIn() && resource.data.userId == request.auth.uid && respectsModeration())
         || (isSignedIn() && resource.data.isPublic == true
             && request.resource.data.diff(resource.data)
                 .affectedKeys().hasOnly(['shareCount', 'updatedAt'])
             && request.resource.data.shareCount == resource.data.shareCount + 1);
 
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ─── Reports (moderation queue; written by Cloud Functions) ───────────────
+
+    match /reports/{reportId} {
+      allow read:  if isSuperAdmin();
+      allow write: if false;
+
+      match /reporters/{key} {
+        allow read, write: if false;
+      }
     }
 
     // ─── Templates ────────────────────────────────────────────────────────────
