@@ -6,9 +6,10 @@ import { useRegisterForm } from "@/hooks/use-auth-forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConsentFields } from "@/components/legal/ConsentFields";
 
 export default function RegisterPage() {
-  const { form, onSubmit, loading } = useRegisterForm();
+  const { form, onSubmit, loading, consent } = useRegisterForm();
   const locale = (useParams()?.locale as string) ?? "cs";
   const {
     register,
@@ -83,7 +84,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <ConsentFields {...consent} />
+
+        <Button type="submit" className="w-full" disabled={loading || consent.age === "under15"}>
           {loading ? "Vytváření účtu..." : "Registrovat se"}
         </Button>
       </form>

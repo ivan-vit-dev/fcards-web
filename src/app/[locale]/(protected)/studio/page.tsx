@@ -46,8 +46,11 @@ import {
   getPlayers,
   getUserDoc,
   removeCardBackground,
+  setAIConsent,
   updateCard as saveCard,
 } from "@/lib/firebaseServices";
+import { hasAIConsent } from "@/lib/legal";
+import { AIConsentDialog } from "@/components/legal/AIConsentDialog";
 import { canUseAI, getAICreditsLeft, getAICreditsUsed, getUpgradeReason } from "@/lib/subscriptionEngine";
 import {
   EMOTION_OPTIONS,
@@ -168,6 +171,25 @@ function StudioContent() {
   const [upgradeReason, setUpgradeReason] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [versionToDelete, setVersionToDelete] = useState<PhotoVersion | null>(null);
+  // AI job waiting for the user's consent (AIConsentDialog).
+  const [pendingJob, setPendingJob] = useState<Parameters<typeof run> | null>(null);
+
+  const acceptAIConsent = async () => {
+    if (!user) return;
+    try {
+      await setAIConsent(user.uid, true);
+    } catch (err) {
+      console.warn("[Studio] AI consent", err);
+      toast.error("Souhlas se nepodařilo uložit.");
+      return;
+    }
+    const job = pendingJob;
+    setPendingJob(null);
+    // The server reads the consent from Firestore; re-read so the store matches it.
+    const fresh = await getUserDoc(user.uid);
+    if (fresh) setUser(fresh);
+    if (job) void run(job[0], job[1], job[2], job[3], true);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -201,8 +223,18 @@ function StudioContent() {
   };
 
   // Gate client-side for a friendly dialog; the Cloud Function enforces the same rules.
-  const run = async (key: string, fn: string, args: Record<string, unknown>, premium: boolean) => {
+  async function run(
+    key: string,
+    fn: string,
+    args: Record<string, unknown>,
+    premium: boolean,
+    consented = hasAIConsent(user)
+  ) {
     if (!card || busy) return;
+    if (!consented) {
+      setPendingJob([key, fn, args, premium]);
+      return;
+    }
     if (!isAdmin && !canUseAI(tier, getAICreditsUsed(user))) {
       setUpgradeReason(getUpgradeReason(tier, "ai"));
       return;
@@ -221,7 +253,7 @@ function StudioContent() {
       setRunning(null);
       await refreshAfterJob(card.id);
     }
-  };
+  }
 
   const editPhoto = (kind: EditKind, o: StudioOption) =>
     sourceImage && run(o.id, "editPhoto", { imageUrl: sourceImage, kind, option: o.id }, o.premium);
@@ -571,6 +603,12 @@ function StudioContent() {
         onOpenChange={(open) => !open && setUpgradeReason(null)}
         reason={upgradeReason ?? undefined}
         currentTier={tier}
+      />
+
+      <AIConsentDialog
+        open={pendingJob !== null}
+        onCancel={() => setPendingJob(null)}
+        onAccept={acceptAIConsent}
       />
     </div>
   );

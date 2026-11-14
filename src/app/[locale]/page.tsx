@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { Button } from "@/components/ui/button";
 import {
   CreditCard,
@@ -165,9 +166,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 px-4 text-center text-sm text-muted-foreground">
-        <p>© 2025 Fotbalové Kartičky. Všechna práva vyhrazena.</p>
-      </footer>
+      <LegalFooter />
     </div>
   );
 }

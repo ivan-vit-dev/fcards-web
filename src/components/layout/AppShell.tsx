@@ -7,6 +7,8 @@ import { AppSidebar } from "./AppSidebar";
 import { AppTopbar } from "./AppTopbar";
 import { AppBottomNav } from "./AppBottomNav";
 import { PageTransition } from "./PageTransition";
+import { ConsentGate } from "@/components/legal/ConsentGate";
+import { hasAcceptedTerms } from "@/lib/legal";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthStore();
@@ -32,6 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
+
+  if (!hasAcceptedTerms(user)) return <ConsentGate />;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

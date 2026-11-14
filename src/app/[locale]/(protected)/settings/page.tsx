@@ -2,7 +2,7 @@
 
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, useParams } from "next/navigation";
-import { CreditCard, Building2, Shield, ChevronRight } from "lucide-react";
+import { CreditCard, Building2, Shield, ChevronRight, Lock } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -18,6 +18,13 @@ export default function SettingsPage() {
       title: "Předplatné",
       description: "Správa plánu, limitů a funkcí",
       href: `/${locale}/settings/subscription`,
+      show: true,
+    },
+    {
+      icon: Lock,
+      title: "Soukromí a účet",
+      description: "Souhlasy, stažení dat a smazání účtu",
+      href: `/${locale}/settings/privacy`,
       show: true,
     },
     {

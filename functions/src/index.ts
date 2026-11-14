@@ -85,6 +85,10 @@ async function startJob(uid: string, cardId: string, premium: boolean): Promise<
     }
 
     const user = userSnap.data() ?? {};
+    // GDPR: photos/data go to third-party AI services only with the user's (parent's) consent.
+    if (!user.consents?.aiPhotosAt) {
+      throw new HttpsError("permission-denied", "AI processing consent required.");
+    }
     const isAdmin = user.role === "superAdmin";
     const tier: string = user.subscriptionTier ?? "free";
     if (premium && tier === "free" && !isAdmin) {
@@ -563,6 +567,67 @@ export const syncProgress = onCall(async (request) => {
       })),
     };
   });
+});
+
+// ─── deleteAccount (GDPR right to erasure) ───────────────────────────────────
+// Deletes everything the account owns, then the Firebase Auth login. Runs in an order that
+// can simply be retried: the login goes last, so a failure halfway leaves the user signed in.
+
+async function deleteQuery(q: admin.firestore.Query): Promise<void> {
+  const snap = await q.get();
+  await Promise.all(snap.docs.map((d) => db.recursiveDelete(d.ref)));
+}
+
+export const deleteAccount = onCall({ timeoutSeconds: 540, memory: "512MiB" }, async (request) => {
+  const uid = requireAuth(request);
+  const bucket = storage.bucket();
+
+  // Cards: each delete fires onCardDeleted, which removes the card's images.
+  await deleteQuery(db.collection("cards").where("userId", "==", uid));
+  await deleteQuery(db.collection("collections").where("userId", "==", uid));
+
+  // Teams the user coaches, with their matches and match stats.
+  const teams = await db.collection("teams").where("coachId", "==", uid).get();
+  for (const team of teams.docs) {
+    await deleteQuery(db.collection("matches").where("teamId", "==", team.id));
+    await db.recursiveDelete(team.ref);
+  }
+  // Teams the user is only a member of.
+  const memberOf = await db.collection("teams").where("memberIds", "array-contains", uid).get();
+  await Promise.all(
+    memberOf.docs.map((t) =>
+      Promise.all([
+        t.ref.update({ memberIds: FieldValue.arrayRemove(uid) }),
+        t.ref.collection("members").doc(uid).delete(),
+      ])
+    )
+  );
+
+  // Match stats of the user's players in other coaches' matches (needs the playerStats.userId
+  // collection-group index from firestore.indexes.json).
+  try {
+    await deleteQuery(db.collectionGroup("playerStats").where("userId", "==", uid));
+  } catch (err) {
+    console.warn("deleteAccount: playerStats cleanup skipped", err instanceof Error ? err.message : err);
+  }
+
+  // Clubs the user owns (and their logos); memberships elsewhere.
+  const clubs = await db.collection("clubs").where("ownerId", "==", uid).get();
+  for (const club of clubs.docs) {
+    await bucket.deleteFiles({ prefix: `clubs/${club.id}/` });
+    await db.recursiveDelete(club.ref);
+  }
+  const clubMemberOf = await db.collection("clubs").where("memberIds", "array-contains", uid).get();
+  await Promise.all(clubMemberOf.docs.map((c) => c.ref.update({ memberIds: FieldValue.arrayRemove(uid) })));
+
+  // Achievements, players (subcollection) and the user doc; photos, crops and team logos.
+  await db.recursiveDelete(db.doc(`userAchievements/${uid}`));
+  await db.recursiveDelete(db.doc(`users/${uid}`));
+  await bucket.deleteFiles({ prefix: `users/${uid}/` });
+
+  await admin.auth().deleteUser(uid);
+  console.log("deleteAccount: account deleted", uid);
+  return { ok: true };
 });
 
 // ─── Storage cleanup ──────────────────────────────────────────────────────────

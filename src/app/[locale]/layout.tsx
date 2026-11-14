@@ -7,6 +7,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { CookieConsent } from "@/components/legal/CookieConsent";
 import { routing } from "@/i18n/routing";
 import "@/app/globals.css";
 
@@ -70,6 +71,7 @@ export default async function LocaleLayout({
           <ThemeProvider>
             <AuthProvider>
               {children}
+              <CookieConsent />
               <Toaster
                 position="top-right"
                 toastOptions={{

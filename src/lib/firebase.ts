@@ -38,6 +38,11 @@ export const getMessaging = async () => {
   return _getMessaging(app);
 };
 
-export const analytics = isSupported().then((yes) =>
-  yes ? getAnalytics(app) : null
-);
+// Analytics sets cookies, which in the EU/CZ need prior opt-in: it starts only after the
+// visitor accepts analytics cookies (CookieConsent). Declining later takes effect on reload.
+let analyticsStarted = false;
+export async function enableAnalytics(): Promise<void> {
+  if (analyticsStarted || typeof window === "undefined" || !firebaseConfig.measurementId) return;
+  analyticsStarted = true;
+  if (await isSupported()) getAnalytics(app);
+}

@@ -19,10 +19,12 @@ import {
   runTransaction,
   increment,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "./firebase";
 import { generateSlug } from "./utils";
 import { SEED_ACHIEVEMENTS, SEED_TEMPLATES } from "./seedData";
 import type {
+  AgeConfirmation,
   User,
   Player,
   CareerStats,
@@ -77,6 +79,42 @@ export async function updateUserDoc(uid: string, data: Partial<User>): Promise<v
     ...data,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ─── Consents & account (GDPR) ──────────────────────────────────────────────
+
+export async function acceptTerms(uid: string, age: AgeConfirmation, version: string): Promise<void> {
+  await updateDoc(doc(db, "users", uid), {
+    "consents.termsVersion": version,
+    "consents.termsAcceptedAt": serverTimestamp(),
+    "consents.age": age,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function setAIConsent(uid: string, granted: boolean): Promise<void> {
+  await updateDoc(doc(db, "users", uid), {
+    "consents.aiPhotosAt": granted ? serverTimestamp() : deleteField(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Everything the account stores about the user, for the GDPR right of access. */
+export async function exportMyData(uid: string): Promise<Record<string, unknown>> {
+  const [user, players, cards, teams, achievements, clubs] = await Promise.all([
+    getUserDoc(uid),
+    getPlayers(uid),
+    getCards(uid),
+    getTeams(uid),
+    getUserAchievements(uid),
+    getClubsByOwner(uid),
+  ]);
+  return { exportedAt: new Date().toISOString(), user, players, cards, teams, clubs, achievements };
+}
+
+/** Server-side: deletes all of the user's data, files and the login itself. */
+export async function deleteMyAccount(): Promise<void> {
+  await httpsCallable(functions, "deleteAccount", { timeout: 9 * 60 * 1000 })();
 }
 
 // ─── Players ──────────────────────────────────────────────────────────────────

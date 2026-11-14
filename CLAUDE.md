@@ -130,6 +130,15 @@ clubs/{clubId}/logo/{filename}         — club logos
 templates/{templateId}/preview.png    — template preview
 ```
 
+### Privacy & consents (children's app — GDPR)
+
+- `user.consents` (`UserConsents`): `termsVersion` must equal `LEGAL_VERSION` (`src/lib/legal.ts`) or `AppShell` shows `ConsentGate` instead of the app (covers Google sign-ups and old accounts). Bump `LEGAL_VERSION` when the terms/privacy policy change materially.
+- Under 15 (Czech age of digital consent) the account must be created by a parent/guardian (`consents.age = "guardian"`).
+- AI jobs need `consents.aiPhotosAt`: the client asks via `AIConsentDialog`, `startJob` in Cloud Functions refuses with `permission-denied` without it. New AI third parties go in `AI_PROCESSORS` (shown in the dialog and the privacy policy).
+- Making a card public asks for confirmation; Firebase Analytics starts only after cookie opt-in (`CookieConsent`, `enableAnalytics`).
+- `deleteAccount` callable erases all user data, files and the Auth login; Settings → Soukromí a účet also offers a JSON data export.
+- Legal pages `/[locale]/legal/privacy|terms` are drafts: fill `OPERATOR` and every `[DOPLNIT]`, and have a lawyer review them before launch.
+
 ### Monetization gating
 
 Feature flags via Firebase Remote Config — do not hardcode tier limits in components. Gate pattern:

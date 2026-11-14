@@ -274,8 +274,8 @@ export function PlayerForm({ userId, player, onSubmit, onPhotoUpload }: PlayerFo
                   Veřejný profil
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Profil uvidí kdokoli s odkazem. U dětí doporučujeme zapnout jen se souhlasem
-                  rodiče.
+                  Profil se jménem, fotkou a statistikami uvidí kdokoli s odkazem. Je-li hráči méně
+                  než 15 let, zveřejnění musí schválit rodič nebo zákonný zástupce.
                 </p>
               </div>
               <Switch id="isPublic" checked={field.value} onCheckedChange={field.onChange} />

@@ -79,6 +79,7 @@ export default function CardDetailPage() {
   );
   const [loading, setLoading] = useState(!card);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [revealOpen, setRevealOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -95,8 +96,14 @@ export default function CardDetailPage() {
       .finally(() => setLoading(false));
   }, [user, cardId]);
 
-  const handleTogglePublic = async () => {
+  const handleTogglePublic = async (confirmed = false) => {
     if (!card || !user) return;
+    // Publishing a child's photo needs a deliberate yes (and the parent's, under 15).
+    if (!card.isPublic && !confirmed) {
+      setPublishOpen(true);
+      return;
+    }
+    setPublishOpen(false);
     const updated = { isPublic: !card.isPublic };
     await updateCard(card.id, updated);
     setCard((c) => c ? { ...c, ...updated } : c);
@@ -342,8 +349,29 @@ export default function CardDetailPage() {
                   : "Vypnuto — kartičku vidíte jen vy. Zapněte pro sdílení odkazem."}
               </p>
             </div>
-            <Switch id="card-public" checked={card.isPublic} onCheckedChange={handleTogglePublic} />
+            <Switch id="card-public" checked={card.isPublic} onCheckedChange={() => handleTogglePublic()} />
           </div>
+          <AlertDialog open={publishOpen} onOpenChange={setPublishOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Zveřejnit kartičku?</AlertDialogTitle>
+                <AlertDialogDescription render={<div />} className="space-y-2 text-left">
+                  <p>
+                    Kartičku s fotkou, jménem a statistikami hráče uvidí každý, kdo má odkaz. Odkaz se
+                    může dál šířit a kopie, které si někdo uloží, už nejde vzít zpět.
+                  </p>
+                  <p className="font-medium text-foreground">
+                    Je-li hráči méně než 15 let, zveřejnění musí schválit rodič nebo zákonný zástupce.
+                  </p>
+                  <p>Kartičku můžete kdykoli znovu skrýt.</p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleTogglePublic(true)}>Zveřejnit</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {card.isPublic && (
             <Link href={`/${locale}/card/${card.shareSlug}`} target="_blank" className="block">

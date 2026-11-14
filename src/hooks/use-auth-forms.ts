@@ -18,6 +18,9 @@ import { auth } from "@/lib/firebase";
 import { createUserDoc, getUserDoc } from "@/lib/firebaseServices";
 import { useAuthStore } from "@/store/authStore";
 import { getFirebaseErrorMessage } from "@/lib/utils";
+import { serverTimestamp, type Timestamp } from "firebase/firestore";
+import { LEGAL_VERSION } from "@/lib/legal";
+import { consentError, type AgeChoice } from "@/components/legal/ConsentFields";
 
 function useLocale() {
   const params = useParams();
@@ -108,8 +111,14 @@ export function useRegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: { displayName: "", email: "", password: "", confirmPassword: "" },
   });
+  const [age, setAge] = useState<AgeChoice | null>(null);
+  const [terms, setTerms] = useState(false);
+  const [consentErr, setConsentErr] = useState<string | null>(null);
 
   const onSubmit = async (values: RegisterValues) => {
+    const err = consentError(age, terms);
+    setConsentErr(err);
+    if (err || !age || age === "under15") return;
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -117,6 +126,11 @@ export function useRegisterForm() {
       const userDoc = await createUserDoc(cred.user.uid, {
         email: values.email,
         displayName: values.displayName,
+        consents: {
+          termsVersion: LEGAL_VERSION,
+          termsAcceptedAt: serverTimestamp() as Timestamp,
+          age,
+        },
       });
       // Set user immediately before redirect to avoid AppShell auth flicker
       setUser(userDoc);
@@ -128,7 +142,24 @@ export function useRegisterForm() {
     }
   };
 
-  return { form, onSubmit, loading };
+  return {
+    form,
+    onSubmit,
+    loading,
+    consent: {
+      age,
+      terms,
+      error: consentErr ?? undefined,
+      onAge: (a: AgeChoice) => {
+        setAge(a);
+        setConsentErr(null);
+      },
+      onTerms: (t: boolean) => {
+        setTerms(t);
+        setConsentErr(null);
+      },
+    },
+  };
 }
 
 // ─── Reset password ───────────────────────────────────────────────────────────

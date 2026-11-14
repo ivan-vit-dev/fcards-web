@@ -74,8 +74,21 @@ export interface User {
   aiCreditsMonth?: string; // "YYYY-MM" the counter belongs to; set by Cloud Functions
   fcmToken?: string;
   clubId?: string;
+  consents?: UserConsents;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** Who confirmed the account: a user aged 15+ (Czech age of digital consent) or a parent/guardian. */
+export type AgeConfirmation = "15plus" | "guardian";
+
+export interface UserConsents {
+  /** LEGAL_VERSION (src/lib/legal.ts) of the terms + privacy policy the user accepted. */
+  termsVersion: string;
+  termsAcceptedAt: Timestamp;
+  age: AgeConfirmation;
+  /** Consent to sending photos to AI services; Cloud Functions refuse AI jobs without it. */
+  aiPhotosAt?: Timestamp;
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────
